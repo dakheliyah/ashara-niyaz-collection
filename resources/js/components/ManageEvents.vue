@@ -46,8 +46,6 @@
 </template>
 
 <script>
-import axios from 'axios';
-
 export default {
   name: 'ManageEvents',
   data() {
@@ -65,7 +63,7 @@ export default {
   methods: {
     fetchEvents() {
       this.loading = true;
-      axios.get('/api/admin/events')
+      window.axios.get('/api/admin/events')
         .then(response => {
           this.events = response.data;
         })
@@ -81,7 +79,7 @@ export default {
       this.actionLoading = true;
       this.errorMessage = '';
       this.successMessage = '';
-      axios.put(`/api/admin/events/${eventToActivate.id}/set-active`)
+      window.axios.put(`/api/admin/events/${eventToActivate.id}/set-active`)
         .then(response => {
           this.successMessage = `Event '${eventToActivate.name}' is now active.`;
           this.fetchEvents(); // Refresh the list
@@ -98,7 +96,7 @@ export default {
       this.actionLoading = true;
       this.errorMessage = '';
       this.successMessage = '';
-      axios.put(`/api/admin/events/${eventToDeactivate.id}/deactivate`)
+      window.axios.put(`/api/admin/events/${eventToDeactivate.id}/deactivate`)
         .then(response => {
           this.successMessage = `Event '${eventToDeactivate.name}' is now inactive.`;
           this.fetchEvents(); // Refresh the list

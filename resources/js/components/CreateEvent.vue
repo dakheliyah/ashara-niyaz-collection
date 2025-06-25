@@ -26,8 +26,6 @@
 </template>
 
 <script>
-import axios from 'axios';
-
 export default {
   name: 'CreateEvent',
   data() {
@@ -48,7 +46,7 @@ export default {
       this.successMessage = '';
       this.errorMessage = '';
 
-      axios.post('/api/admin/events', this.event)
+      window.axios.post('/api/admin/events', this.event)
         .then(response => {
           this.successMessage = 'Event created successfully!';
           // Reset form

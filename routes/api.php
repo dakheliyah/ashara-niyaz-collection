@@ -48,6 +48,8 @@ Route::middleware('its.auth')->group(function () {
         Route::get('/collector-sessions/status', [CollectorSessionController::class, 'status']);
         Route::post('/collector-sessions/start', [CollectorSessionController::class, 'startSession']);
         Route::post('/collector-sessions/end', [CollectorSessionController::class, 'endSession']);
+        
+        // Donation Routes (accessible by admin and collector via hierarchical permissions)
         Route::post('/donations', [DonationController::class, 'store']);
         Route::get('/donation-types', [DonationTypeController::class, 'index']);
         Route::get('/currencies', [CurrencyController::class, 'index']);

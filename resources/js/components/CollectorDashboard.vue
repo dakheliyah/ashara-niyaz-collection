@@ -9,11 +9,18 @@
         <p>Error: {{ error }}</p>
       </div>
       <div v-if="session">
-        <h2>Active Session</h2>
-        <p><strong>Session started at:</strong> {{ new Date(session.started_at).toLocaleString() }}</p>
-        <button @click="endSession" :disabled="isSubmitting">
-          {{ isSubmitting ? 'Ending...' : 'End Session' }}
-        </button>
+        <div class="session-info">
+          <h2>Active Session</h2>
+          <p><strong>Session started at:</strong> {{ new Date(session.started_at).toLocaleString() }}</p>
+          <button @click="endSession" :disabled="isSubmitting" class="end-session-btn">
+            {{ isSubmitting ? 'Ending...' : 'End Session' }}
+          </button>
+        </div>
+        
+        <!-- Record Donation Component when session is active -->
+        <div class="donation-section">
+          <RecordDonation />
+        </div>
       </div>
       <div v-else>
         <h2>No Active Session</h2>
@@ -27,10 +34,13 @@
 </template>
 
 <script>
-import axios from 'axios';
+import RecordDonation from './RecordDonation.vue';
 
 export default {
   name: 'CollectorDashboard',
+  components: {
+    RecordDonation
+  },
   data() {
     return {
       session: null,
@@ -47,7 +57,7 @@ export default {
       this.isLoading = true;
       this.error = null;
       try {
-        const response = await axios.get('/api/collector-sessions/status');
+        const response = await window.axios.get('/api/collector-sessions/status');
         this.session = response.data;
       } catch (error) {
         if (error.response && error.response.status === 404) {
@@ -64,7 +74,7 @@ export default {
       this.isSubmitting = true;
       this.error = null;
       try {
-        const response = await axios.post('/api/collector-sessions/start');
+        const response = await window.axios.post('/api/collector-sessions/start');
         this.session = response.data;
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to start session.';
@@ -77,7 +87,7 @@ export default {
       this.isSubmitting = true;
       this.error = null;
       try {
-        await axios.post('/api/collector-sessions/end');
+        await window.axios.post('/api/collector-sessions/end');
         this.session = null; // Session is now closed
       } catch (error) {
         this.error = error.response?.data?.message || 'Failed to end session.';
@@ -95,6 +105,38 @@ export default {
   color: red;
   margin-bottom: 15px;
 }
+
+.session-info {
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.session-info h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.end-session-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  margin-top: 15px;
+}
+
+.end-session-btn:hover:not(:disabled) {
+  background-color: #c0392b;
+}
+
+.donation-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 button {
   padding: 10px 20px;
   font-size: 16px;
@@ -103,6 +145,7 @@ button {
   border-radius: 5px;
   background-color: #f0f0f0;
 }
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.6;

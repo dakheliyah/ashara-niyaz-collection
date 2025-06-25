@@ -157,8 +157,6 @@
 </template>
 
 <script>
-import axios from 'axios';
-
 export default {
   name: 'AdminDashboard',
   data() {
@@ -189,7 +187,7 @@ export default {
       this.loadingEvents = true;
       this.eventsError = null;
       try {
-        const response = await axios.get('/api/admin/events');
+        const response = await window.axios.get('/api/admin/events');
         this.events = response.data;
         
         // Auto-select active event if available
@@ -222,7 +220,7 @@ export default {
       this.loading = true;
       this.error = null;
       try {
-        const response = await axios.get(`/api/admin/events/${this.selectedEventId}/dashboard`);
+        const response = await window.axios.get(`/api/admin/events/${this.selectedEventId}/dashboard`);
         this.dashboardData = response.data;
       } catch (error) {
         console.error('Error fetching dashboard data:', error);

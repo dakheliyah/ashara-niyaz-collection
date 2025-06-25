@@ -37,23 +37,33 @@
             </div>
 
             <div class="form-group">
-                <label for="donation_type_id">Donation Type:</label>
-                <select id="donation_type_id" v-model="form.donation_type_id" required class="form-control">
-                    <option value="">Select Donation Type</option>
-                    <option v-for="type in donationTypes" :key="type.id" :value="type.id">
+                <label>Donation Type:</label>
+                <div class="button-grid">
+                    <button 
+                        type="button"
+                        v-for="type in donationTypes" 
+                        :key="type.id"
+                        @click="selectDonationType(type.id)"
+                        :class="['option-btn', { 'selected': form.donation_type_id == type.id }]"
+                    >
                         {{ type.name }}
-                    </option>
-                </select>
+                    </button>
+                </div>
             </div>
 
             <div class="form-group">
-                <label for="currency_id">Currency:</label>
-                <select id="currency_id" v-model="form.currency_id" required class="form-control">
-                    <option value="">Select Currency</option>
-                    <option v-for="currency in currencies" :key="currency.id" :value="currency.id">
-                        {{ currency.name }} ({{ currency.symbol }})
-                    </option>
-                </select>
+                <label>Currency:</label>
+                <div class="button-grid">
+                    <button 
+                        type="button"
+                        v-for="currency in currencies" 
+                        :key="currency.id"
+                        @click="selectCurrency(currency.id)"
+                        :class="['option-btn', { 'selected': form.currency_id == currency.id }]"
+                    >
+                        {{ currency.symbol }} {{ currency.name }}
+                    </button>
+                </div>
             </div>
 
             <div class="form-group">
@@ -65,23 +75,12 @@
                     step="0.01" 
                     min="0" 
                     required 
-                    class="form-control"
+                    class="form-control amount-input"
                     placeholder="0.00"
                 />
             </div>
 
-            <div class="form-group">
-                <label for="remarks">Remarks (Optional):</label>
-                <textarea 
-                    id="remarks" 
-                    v-model="form.remarks" 
-                    rows="3" 
-                    class="form-control"
-                    placeholder="Any additional notes..."
-                ></textarea>
-            </div>
-
-            <button type="submit" :disabled="loading" class="submit-btn">
+            <button type="submit" :disabled="loading || !isFormValid" class="submit-btn">
                 <span v-if="loading" class="loading-spinner">⏳</span>
                 <span v-else>💰</span>
                 {{ loading ? 'Submitting...' : 'Submit Donation' }}
@@ -95,8 +94,6 @@
 </template>
 
 <script>
-import axios from 'axios';
-
 export default {
     name: 'RecordDonation',
     data() {
@@ -106,8 +103,7 @@ export default {
                 whatsapp_number: '',
                 donation_type_id: '',
                 currency_id: '',
-                amount: '',
-                remarks: ''
+                amount: ''
             },
             donationTypes: [],
             currencies: [],
@@ -122,6 +118,11 @@ export default {
             donorLookupTimeout: null
         };
     },
+    computed: {
+        isFormValid() {
+            return this.form.donor_its_id && this.form.donation_type_id && this.form.currency_id && this.form.amount;
+        }
+    },
     mounted() {
         this.fetchDonationTypes();
         this.fetchCurrencies();
@@ -129,7 +130,7 @@ export default {
     methods: {
         async fetchDonationTypes() {
             try {
-                const response = await axios.get('/api/donation-types');
+                const response = await window.axios.get('/api/donation-types');
                 this.donationTypes = response.data;
             } catch (error) {
                 console.error('Error fetching donation types:', error);
@@ -137,7 +138,7 @@ export default {
         },
         async fetchCurrencies() {
             try {
-                const response = await axios.get('/api/currencies');
+                const response = await window.axios.get('/api/currencies');
                 this.currencies = response.data;
             } catch (error) {
                 console.error('Error fetching currencies:', error);
@@ -172,7 +173,7 @@ export default {
             this.loadingDonor = true;
             
             try {
-                const response = await axios.get(`/api/donors/${currentItsId}`);
+                const response = await window.axios.get(`/api/donors/${currentItsId}`);
                 this.donorInfo = response.data;
             } catch (error) {
                 console.error('Error looking up donor:', error);
@@ -181,12 +182,18 @@ export default {
                 this.loadingDonor = false;
             }
         },
+        selectDonationType(id) {
+            this.form.donation_type_id = id;
+        },
+        selectCurrency(id) {
+            this.form.currency_id = id;
+        },
         async submitDonation() {
             this.loading = true;
             this.message = '';
             
             try {
-                const response = await axios.post('/api/donations', this.form);
+                const response = await window.axios.post('/api/donations', this.form);
                 this.message = 'Donation recorded successfully!';
                 this.messageClass = 'success';
                 
@@ -196,8 +203,7 @@ export default {
                     whatsapp_number: '',
                     donation_type_id: '',
                     currency_id: '',
-                    amount: '',
-                    remarks: ''
+                    amount: ''
                 };
                 this.donorInfo = { fullname: null, email: null };
                 
@@ -268,6 +274,71 @@ export default {
     color: #6c757d;
     font-style: italic;
     font-size: 14px;
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.option-btn {
+    padding: 15px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #ffffff;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-align: center;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.option-btn:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.option-btn.selected {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.amount-input {
+    text-align: right;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .button-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .option-btn {
+        padding: 18px 15px;
+        font-size: 18px;
+        min-height: 55px;
+    }
+    
+    .form-control {
+        font-size: 16px;
+        padding: 12px;
+    }
+    
+    .amount-input {
+        font-size: 20px;
+        padding: 15px;
+    }
 }
 
 .submit-btn {

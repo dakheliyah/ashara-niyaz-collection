@@ -228,8 +228,6 @@
 </template>
 
 <script>
-import axios from 'axios';
-
 export default {
   name: 'UserManagement',
   data() {
@@ -280,7 +278,7 @@ export default {
         this.loading = true;
         this.error = null;
         
-        const response = await axios.get('/api/admin/users');
+        const response = await window.axios.get('/api/admin/users');
         this.users = response.data.users;
         this.filterUsers();
       } catch (error) {
@@ -305,7 +303,7 @@ export default {
       }
       
       try {
-        const response = await axios.post(`/api/admin/users/${userId}/deactivate`);
+        const response = await window.axios.post(`/api/admin/users/${userId}/deactivate`);
         await this.loadUsers();
         alert('User deactivated successfully');
       } catch (error) {
@@ -316,7 +314,7 @@ export default {
     
     async activateUser(userId) {
       try {
-        const response = await axios.post(`/api/admin/users/${userId}/activate`);
+        const response = await window.axios.post(`/api/admin/users/${userId}/activate`);
         await this.loadUsers();
         alert('User activated successfully');
       } catch (error) {
@@ -331,7 +329,7 @@ export default {
       }
       
       try {
-        const response = await axios.post(`/api/admin/users/${userId}/archive`);
+        const response = await window.axios.post(`/api/admin/users/${userId}/archive`);
         await this.loadUsers();
         alert('User archived successfully');
       } catch (error) {
@@ -365,7 +363,7 @@ export default {
     
     async createUser() {
       try {
-        const response = await axios.post('/api/admin/users', this.newUser);
+        const response = await window.axios.post('/api/admin/users', this.newUser);
         await this.loadUsers();
         
         // Show success message with token
@@ -391,7 +389,7 @@ export default {
       if (this.newUser.its_id.length === 8) {
         try {
           // Check if user already exists in mumineen table
-          const response = await axios.get(`/api/admin/mumineen/${this.newUser.its_id}`);
+          const response = await window.axios.get(`/api/admin/mumineen/${this.newUser.its_id}`);
           if (response.data && response.data.fullname) {
             this.fetchedUserName = response.data.fullname;
           } else {

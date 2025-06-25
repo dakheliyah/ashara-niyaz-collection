@@ -31,7 +31,7 @@ export default {
         this.error = null;
         
         // Get user info from the parent App component or fetch it directly
-        const response = await axios.get('/api/me');
+        const response = await window.axios.get('/api/me');
         const user = response.data;
         
         // Redirect based on user role

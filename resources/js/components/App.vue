@@ -45,7 +45,7 @@ export default {
       try {
         console.log('Fetching user info...');
         console.log('Token being sent:', window.axios.defaults.headers.common['Token']);
-        const response = await axios.get('/api/me');
+        const response = await window.axios.get('/api/me');
         this.user = response.data;
         console.log('User loaded successfully:', this.user);
       } catch (error) {
