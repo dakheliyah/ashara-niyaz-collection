@@ -103,7 +103,7 @@ let token;
 
 if (isLocalhost) {
     // Use hardcoded tokens for local development
-    token = 'PMVU4zSbtB%2FMFMCD2p%2BPwQ8rBUkc6TYQi1mNaTyoFpE%3D'; // Default to collector user
+    // token = 'PMVU4zSbtB%2FMFMCD2p%2BPwQ8rBUkc6TYQi1mNaTyoFpE%3D'; // Default to collector user
     // token = 'geFp5FFAagw7YvRYNDiREj%2BC5wY1RjQWm9K%2FDxxTTPo%3D'; // Default to admin user
     console.log('✅ Using hardcoded token for localhost development');
 } else {
@@ -158,10 +158,28 @@ if (isLocalhost) {
 if (token) {
     let finalToken;
     
+    console.log('🔍 Token processing debug:');
+    console.log('Raw token from cookie:', token);
+    console.log('Token length:', token.length);
+    console.log('Is localhost:', isLocalhost);
+    
     if (isLocalhost) {
-        // Use hardcoded token as-is for localhost (it's already URL-encoded)
+        // For localhost, use the token from cookie as-is (no hardcoding)
         finalToken = token;
-        console.log('🔧 Using localhost token as-is');
+        console.log('🔧 Using cookie token for localhost');
+        
+        // Try both URL-encoded and decoded versions to see which works
+        console.log('🧪 Testing token variations:');
+        console.log('Option 1 - Raw token:', token);
+        console.log('Option 2 - URL encoded:', encodeURIComponent(token));
+        console.log('Option 3 - URL decoded:', decodeURIComponent(token));
+        
+        // Since we're getting "Invalid token", let's try URL encoding it
+        // The token might need to be URL-encoded for the API
+        const encodedToken = encodeURIComponent(token);
+        console.log('🔄 Trying URL-encoded version:', encodedToken);
+        finalToken = encodedToken;
+        
     } else {
         // Decode the URL-encoded token from cookie for production
         finalToken = decodeURIComponent(token);
@@ -175,7 +193,7 @@ if (token) {
     window.authToken = finalToken; // Make token available globally
     
     console.log('✅ Authentication token configured successfully');
-    console.log('🔑 Final token preview:', finalToken.substring(0, 10) + '...');
+    console.log('🔑 Final token being sent to API:', finalToken);
     console.log('📡 Axios headers configured:', Object.keys(window.axios.defaults.headers.common));
 } else {
     console.error('❌ Authentication token not found. API requests will fail.');
@@ -186,13 +204,30 @@ if (token) {
 // Add request interceptor to log outgoing requests
 window.axios.interceptors.request.use(
     function (config) {
-        console.log('🚀 Making API request to:', config.url);
-        console.log('📤 Request headers:', config.headers);
-        console.log('🔑 Token header present:', !!config.headers['Token']);
+        console.log('\n🚀 === OUTGOING API REQUEST ===');
+        console.log('📍 URL:', config.url);
+        console.log('🔧 Method:', config.method?.toUpperCase() || 'GET');
+        console.log('📤 All Headers:', config.headers);
+        console.log('🔑 Token Header:', config.headers['Token'] || 'NOT SET');
+        console.log('🔑 Token Present:', !!config.headers['Token']);
+        
+        if (config.data) {
+            console.log('📦 Request Data:', config.data);
+        }
+        
+        if (config.params) {
+            console.log('🔗 URL Params:', config.params);
+        }
+        
+        console.log('⏰ Request Time:', new Date().toISOString());
+        console.log('=== END REQUEST LOG ===\n');
+        
         return config;
     },
     function (error) {
-        console.error('❌ Request interceptor error:', error);
+        console.error('\n❌ === REQUEST INTERCEPTOR ERROR ===');
+        console.error('Error:', error);
+        console.error('=== END REQUEST ERROR ===\n');
         return Promise.reject(error);
     }
 );
@@ -200,18 +235,39 @@ window.axios.interceptors.request.use(
 // Add response interceptor to log responses
 window.axios.interceptors.response.use(
     function (response) {
-        console.log('✅ API response from:', response.config.url);
-        console.log('📥 Response status:', response.status);
+        console.log('\n✅ === API RESPONSE SUCCESS ===');
+        console.log('📍 URL:', response.config.url);
+        console.log('📥 Status:', response.status, response.statusText);
+        console.log('📥 Response Headers:', response.headers);
+        console.log('📦 Response Data:', response.data);
+        console.log('⏰ Response Time:', new Date().toISOString());
+        console.log('=== END RESPONSE LOG ===\n');
+        
         return response;
     },
     function (error) {
-        console.error('❌ API error from:', error.config?.url);
-        console.error('📥 Error status:', error.response?.status);
-        console.error('📥 Error message:', error.response?.data?.message);
-        if (error.response?.status === 401 || error.response?.data?.message?.includes('Token')) {
-            console.error('🔐 Authentication error detected!');
-            console.error('🔑 Token header sent:', error.config?.headers?.['Token'] ? 'YES' : 'NO');
+        console.error('\n❌ === API RESPONSE ERROR ===');
+        console.error('📍 URL:', error.config?.url || 'Unknown');
+        console.error('🔧 Method:', error.config?.method?.toUpperCase() || 'Unknown');
+        console.error('📥 Error Status:', error.response?.status || 'No Status');
+        console.error('📥 Error Status Text:', error.response?.statusText || 'No Status Text');
+        console.error('📥 Error Headers:', error.response?.headers || 'No Headers');
+        console.error('📥 Error Data:', error.response?.data || 'No Data');
+        console.error('📥 Full Error Message:', error.message);
+        
+        // Special handling for authentication errors
+        if (error.response?.status === 401 || error.response?.data?.message?.includes('token')) {
+            console.error('\n🔐 === AUTHENTICATION ERROR DETECTED ===');
+            console.error('🔑 Token Sent:', error.config?.headers?.['Token'] || 'NO TOKEN SENT');
+            console.error('🔑 Token Length:', error.config?.headers?.['Token']?.length || 0);
+            console.error('🔑 Expected Token Format: Base64 encoded string');
+            console.error('💡 Suggestion: Check if token needs URL encoding/decoding');
+            console.error('=== END AUTH ERROR ===\n');
         }
+        
+        console.error('⏰ Error Time:', new Date().toISOString());
+        console.error('=== END ERROR LOG ===\n');
+        
         return Promise.reject(error);
     }
 );
