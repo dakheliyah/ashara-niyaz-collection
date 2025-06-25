@@ -27,11 +27,11 @@ class ItsAuthMiddleware
         }
 
         // The token value might be URL-encoded.
-        // $token = urldecode($token);
+        $token = urldecode($token);
 
         $decryptedToken = $this->decrypt($token);
 
-        // Find the admin by token directly
+        // Find the admin by its_id (decrypted from token)
         $admin = Admin::with('role')->where('its_id', $decryptedToken)->first();
 
         if (!$admin) {
@@ -51,43 +51,30 @@ class ItsAuthMiddleware
     /**
      * Decrypt data from secure storage using OpenSSL.
      */
-    private function decrypt($encrypted, $json_decode = false)
+    private function decrypt($encrypted)
     {
         if (empty($encrypted)) {
             return null;
         }
         
         $key = env('ITS_ENCRYPTION_KEY');
-        
         $decoded = base64_decode($encrypted);
+        
         if ($decoded === false) {
-            error_log('[ITS OneLogin] Decryption failed: Invalid base64 encoding');
             return null;
         }
         
         $ivLength = openssl_cipher_iv_length('AES-256-CBC');
         
         if (strlen($decoded) <= $ivLength) {
-            error_log('[ITS OneLogin] Decryption failed: Data too short');
             return null;
         }
         
         $iv = substr($decoded, 0, $ivLength);
         $cipherText = substr($decoded, $ivLength);
-
+        
         $decrypted = openssl_decrypt($cipherText, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
-        if ($decrypted === false) {
-            error_log('[ITS OneLogin] Decryption failed: ' . openssl_error_string());
-            return null;
-        }
         
-        if ($json_decode && !empty($decrypted) && ($decrypted[0] === '{' || $decrypted[0] === '[')) {
-            $json_data = json_decode($decrypted, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                return $json_data;
-            }
-        }
-        
-        return $decrypted;
+        return $decrypted === false ? null : $decrypted;
     }
 }

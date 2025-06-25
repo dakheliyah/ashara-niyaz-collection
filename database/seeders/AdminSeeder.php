@@ -24,7 +24,6 @@ class AdminSeeder extends Seeder
                 ['its_id' => 30361114], // Find admin by this ITS ID
                 [
                     'role_id' => $adminRole->id,
-                    'token' => urldecode('geFp5FFAagw7YvRYNDiREj%2BC5wY1RjQWm9K%2FDxxTTPo%3D'), // Admin token (decoded)
                     'created_by' => 'system',
                 ]
             );
@@ -36,12 +35,11 @@ class AdminSeeder extends Seeder
                 ['its_id' => 20324216], // Find collector by this ITS ID
                 [
                     'role_id' => $collectorRole->id,
-                    'token' => urldecode('PMVU4zSbtB%2FMFMCD2p%2BPwQ8rBUkc6TYQi1mNaTyoFpE%3D'), // Collector token (decoded)
                     'created_by' => 'system',
                 ]
             );
         }
 
-        echo "Created/Updated admin and collector users with tokens\n";
+        echo "Created/Updated admin and collector users (tokens generated dynamically)\n";
     }
 }

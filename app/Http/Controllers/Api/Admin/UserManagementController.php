@@ -211,20 +211,16 @@ class UserManagementController extends Controller
                 return response()->json(['error' => 'Invalid role'], 400);
             }
 
-            // Check if mumineen exists
+            // Validate that ITS ID exists in mumineen table
             $mumineen = Mumineen::where('its_id', $request->its_id)->first();
             if (!$mumineen) {
                 return response()->json(['error' => 'ITS ID not found in mumineen database'], 400);
             }
 
-            // Generate a unique token
-            $token = base64_encode(random_bytes(32));
-
-            // Create the admin user
+            // Create the admin user (no token stored in DB)
             $user = Admin::create([
                 'its_id' => $request->its_id,
                 'role_id' => $role->id,
-                'token' => $token,
                 'status' => 'active',
                 'created_by' => $request->attributes->get('its_id'), // Current admin's ITS ID
             ]);
@@ -236,7 +232,7 @@ class UserManagementController extends Controller
                 'message' => 'User created successfully',
                 'user' => $user,
                 'fullname' => $mumineen->fullname,
-                'token' => $token // Return token so admin can share it
+                'note' => 'User will authenticate using encrypted its_id token'
             ], 201);
         } catch (\Exception $e) {
             return response()->json([

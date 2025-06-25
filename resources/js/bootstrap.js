@@ -102,10 +102,7 @@ console.log('Current URL:', window.location.href);
 let token;
 
 if (isLocalhost) {
-    // Use hardcoded tokens for local development
-    // token = 'PMVU4zSbtB%2FMFMCD2p%2BPwQ8rBUkc6TYQi1mNaTyoFpE%3D'; // Default to collector user
-    // token = 'geFp5FFAagw7YvRYNDiREj%2BC5wY1RjQWm9K%2FDxxTTPo%3D'; // Default to admin user
-    console.log('✅ Using hardcoded token for localhost development');
+    console.log('✅ Using hardcoded admin token for localhost development');
 } else {
     // Get authentication token from its_no cookie for production
     console.log('🌐 Production environment detected');
