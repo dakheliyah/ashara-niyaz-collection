@@ -65,11 +65,15 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     Route::post('/sessions/{sessionId}/reconcile', [EventDashboardController::class, 'reconcileSession']);
     
     // User management routes
-    Route::get('/users', [UserManagementController::class, 'index']);
-    Route::post('/users/{userId}/deactivate', [UserManagementController::class, 'deactivate']);
-    Route::post('/users/{userId}/archive', [UserManagementController::class, 'archive']);
-    Route::post('/users/{userId}/activate', [UserManagementController::class, 'activate']);
-    Route::get('/collectors/{itsId}/status', [UserManagementController::class, 'checkCollectorStatus']);
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/users', [UserManagementController::class, 'index']);
+        Route::post('/users', [UserManagementController::class, 'store']);
+        Route::post('/users/{userId}/deactivate', [UserManagementController::class, 'deactivate']);
+        Route::post('/users/{userId}/archive', [UserManagementController::class, 'archive']);
+        Route::post('/users/{userId}/activate', [UserManagementController::class, 'activate']);
+        Route::get('/collectors/{itsId}/status', [UserManagementController::class, 'checkCollectorStatus']);
+        Route::get('/mumineen/{itsId}', [UserManagementController::class, 'getMumineen']);
+    });
     
     Route::post('/admins', [AdminController::class, 'store']);
     Route::put('/admins/{admin}', [AdminController::class, 'update']);

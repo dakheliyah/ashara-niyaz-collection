@@ -4,12 +4,32 @@ import AdminDashboard from '../components/AdminDashboard.vue';
 import CollectorDashboard from '../components/CollectorDashboard.vue';
 import DonorDashboard from '../components/DonorDashboard.vue';
 import NotFound from '../components/NotFound.vue';
-import Sessions from '../components/Sessions.vue';
 import CreateEvent from '../components/CreateEvent.vue';
 import ManageEvents from '../components/ManageEvents.vue';
 import RecordDonation from '../components/RecordDonation.vue';
 import EventDashboard from '../components/EventDashboard.vue';
 import UserManagement from '../components/UserManagement.vue';
+import axios from 'axios';
+
+// Helper function to check user role
+async function getUserRole() {
+    try {
+        const response = await axios.get('/api/me');
+        return response.data.role;
+    } catch (error) {
+        console.error('Error fetching user role:', error);
+        return null;
+    }
+}
+
+// Route guard for role-based access
+async function requireRole(allowedRoles) {
+    const userRole = await getUserRole();
+    if (!userRole || !allowedRoles.includes(userRole)) {
+        return { name: 'Dashboard' }; // Redirect to main dashboard
+    }
+    return true;
+}
 
 const routes = [
     {
@@ -21,47 +41,50 @@ const routes = [
         path: '/admin',
         name: 'AdminDashboard',
         component: AdminDashboard,
+        beforeEnter: async () => await requireRole(['admin']),
     },
     {
         path: '/collector',
         name: 'CollectorDashboard',
         component: CollectorDashboard,
+        beforeEnter: async () => await requireRole(['collector']),
     },
     {
         path: '/donor',
         name: 'DonorDashboard',
         component: DonorDashboard,
-    },
-    {
-        path: '/sessions',
-        name: 'Sessions',
-        component: Sessions,
+        beforeEnter: async () => await requireRole(['donor']),
     },
     {
         path: '/create-event',
         name: 'CreateEvent',
         component: CreateEvent,
+        beforeEnter: async () => await requireRole(['admin', 'collector']),
     },
     {
         path: '/manage-events',
         name: 'ManageEvents',
         component: ManageEvents,
+        beforeEnter: async () => await requireRole(['admin', 'collector']),
     },
     {
         path: '/record-donation',
         name: 'RecordDonation',
         component: RecordDonation,
+        beforeEnter: async () => await requireRole(['collector']),
     },
     {
         path: '/events/:eventId/dashboard',
         name: 'EventDashboard',
         component: EventDashboard,
         props: true,
+        beforeEnter: async () => await requireRole(['admin', 'collector', 'donor']),
     },
     {
         path: '/user-management',
         name: 'UserManagement',
         component: UserManagement,
+        beforeEnter: async () => await requireRole(['admin']),
     },
     {
         path: '/:pathMatch(.*)*',

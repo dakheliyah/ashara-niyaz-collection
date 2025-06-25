@@ -5,10 +5,50 @@
       <p>Manage system users, their status, and reconciliation requirements</p>
     </div>
 
-    <div v-if="loading" class="loading">Loading users...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    
-    <div v-else class="users-content">
+    <!-- Create User Section -->
+    <div class="create-user-section">
+      <h2>Create New User</h2>
+      <div class="create-user-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="its_id">ITS ID:</label>
+            <input 
+              type="text" 
+              id="its_id"
+              v-model="newUser.its_id" 
+              class="form-control"
+              placeholder="Enter 8-digit ITS ID"
+              maxlength="8"
+              @input="fetchUserName"
+            />
+          </div>
+          <div class="form-group">
+            <label for="role">Role:</label>
+            <select id="role" v-model="newUser.role" @change="onRoleChange" class="role-select">
+              <option value="">Select Role</option>
+              <option value="admin">Admin</option>
+              <option value="collector">Collector</option>
+            </select>
+            <small v-if="newUser.role" style="color: #666; margin-top: 5px; display: block;">
+              Selected: {{ newUser.role }}
+            </small>
+          </div>
+          <div class="form-group">
+            <button @click="createUser" class="btn btn-primary" :disabled="!canCreateUser">
+              Create User
+            </button>
+          </div>
+        </div>
+        <div class="user-name-display" v-if="fetchedUserName">
+          {{ fetchedUserName }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Users List Section -->
+    <div class="users-list-section">
+      <h2>Existing Users</h2>
+      
       <!-- Status Filter -->
       <div class="filters">
         <div class="filter-group">
@@ -116,29 +156,29 @@
           </table>
         </div>
       </div>
+    </div>
 
-      <!-- Statistics -->
-      <div class="statistics">
-        <div class="stat-card">
-          <h4>Total Users</h4>
-          <div class="stat-value">{{ users.length }}</div>
-        </div>
-        <div class="stat-card">
-          <h4>Active Users</h4>
-          <div class="stat-value">{{ users.filter(u => u.status === 'active').length }}</div>
-        </div>
-        <div class="stat-card">
-          <h4>Inactive Users</h4>
-          <div class="stat-value">{{ users.filter(u => u.status === 'inactive').length }}</div>
-        </div>
-        <div class="stat-card">
-          <h4>Archived Users</h4>
-          <div class="stat-value">{{ users.filter(u => u.status === 'archived').length }}</div>
-        </div>
-        <div class="stat-card">
-          <h4>Unreconciled Sessions</h4>
-          <div class="stat-value">{{ totalUnreconciledSessions }}</div>
-        </div>
+    <!-- Statistics -->
+    <div class="statistics">
+      <div class="stat-card">
+        <h4>Total Users</h4>
+        <div class="stat-value">{{ users.length }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Active Users</h4>
+        <div class="stat-value">{{ users.filter(u => u.status === 'active').length }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Inactive Users</h4>
+        <div class="stat-value">{{ users.filter(u => u.status === 'inactive').length }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Archived Users</h4>
+        <div class="stat-value">{{ users.filter(u => u.status === 'archived').length }}</div>
+      </div>
+      <div class="stat-card">
+        <h4>Unreconciled Sessions</h4>
+        <div class="stat-value">{{ totalUnreconciledSessions }}</div>
       </div>
     </div>
 
@@ -188,6 +228,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'UserManagement',
   data() {
@@ -200,7 +242,13 @@ export default {
       roleFilter: '',
       showSessionsModal: false,
       collectorSessions: [],
-      selectedCollectorName: ''
+      selectedCollectorName: '',
+      newUser: {
+        its_id: '',
+        role: ''
+      },
+      fetchedUserName: '',
+      canCreateUser: false
     };
   },
   computed: {
@@ -208,6 +256,19 @@ export default {
       return this.users.reduce((total, user) => {
         return total + (user.unreconciled_sessions || 0);
       }, 0);
+    }
+  },
+  watch: {
+    'newUser.its_id': function(newVal) {
+      console.log('ITS ID changed:', newVal);
+      this.updateCanCreateUser();
+      if (newVal.length !== 8) {
+        this.fetchedUserName = '';
+      }
+    },
+    'newUser.role': function(newVal) {
+      console.log('Role changed:', newVal);
+      this.updateCanCreateUser();
     }
   },
   async mounted() {
@@ -219,20 +280,8 @@ export default {
         this.loading = true;
         this.error = null;
         
-        const response = await fetch('/api/admin/users', {
-          headers: {
-            'Authorization': `Bearer ${window.authToken}`,
-            'Token': window.authToken,
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        this.users = data.users;
+        const response = await axios.get('/api/admin/users');
+        this.users = response.data.users;
         this.filterUsers();
       } catch (error) {
         console.error('Error loading users:', error);
@@ -256,20 +305,7 @@ export default {
       }
       
       try {
-        const response = await fetch(`/api/admin/users/${userId}/deactivate`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${window.authToken}`,
-            'Token': window.authToken,
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to deactivate user');
-        }
-
+        const response = await axios.post(`/api/admin/users/${userId}/deactivate`);
         await this.loadUsers();
         alert('User deactivated successfully');
       } catch (error) {
@@ -280,19 +316,7 @@ export default {
     
     async activateUser(userId) {
       try {
-        const response = await fetch(`/api/admin/users/${userId}/activate`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${window.authToken}`,
-            'Token': window.authToken,
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to activate user');
-        }
-
+        const response = await axios.post(`/api/admin/users/${userId}/activate`);
         await this.loadUsers();
         alert('User activated successfully');
       } catch (error) {
@@ -307,20 +331,7 @@ export default {
       }
       
       try {
-        const response = await fetch(`/api/admin/users/${userId}/archive`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${window.authToken}`,
-            'Token': window.authToken,
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to archive user');
-        }
-
+        const response = await axios.post(`/api/admin/users/${userId}/archive`);
         await this.loadUsers();
         alert('User archived successfully');
       } catch (error) {
@@ -352,9 +363,55 @@ export default {
       this.selectedCollectorName = '';
     },
     
+    async createUser() {
+      try {
+        const response = await axios.post('/api/admin/users', this.newUser);
+        await this.loadUsers();
+        
+        // Show success message with token
+        const token = response.data.token;
+        const fullname = response.data.fullname;
+        alert(`User created successfully!\n\nName: ${fullname}\nGenerated Token: ${token}\n\nPlease save this token securely and share it with the user. This is the only time it will be displayed.`);
+        
+        // Reset form
+        this.newUser = {
+          its_id: '',
+          role: ''
+        };
+        this.fetchedUserName = '';
+        this.canCreateUser = false;
+      } catch (error) {
+        console.error('Error creating user:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Failed to create user';
+        alert(`Error: ${errorMessage}`);
+      }
+    },
+    
+    async fetchUserName() {
+      if (this.newUser.its_id.length === 8) {
+        try {
+          // Check if user already exists in mumineen table
+          const response = await axios.get(`/api/admin/mumineen/${this.newUser.its_id}`);
+          if (response.data && response.data.fullname) {
+            this.fetchedUserName = response.data.fullname;
+          } else {
+            this.fetchedUserName = 'Name not found in database';
+          }
+        } catch (error) {
+          this.fetchedUserName = 'Name not found in database';
+        }
+      }
+    },
+    
     formatDateTime(dateString) {
       if (!dateString) return '-';
       return new Date(dateString).toLocaleString();
+    },
+    updateCanCreateUser() {
+      this.canCreateUser = this.newUser.its_id.length === 8 && this.newUser.role !== '';
+    },
+    onRoleChange() {
+      console.log('Role changed to:', this.newUser.role);
     }
   }
 };
@@ -640,5 +697,122 @@ export default {
 
 .error {
   color: #dc3545;
+}
+
+.create-user-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.create-user-section h2 {
+  margin: 0 0 20px 0;
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.create-user-form {
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 200px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-control {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.role-select {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background-color: white;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.role-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.user-name-display {
+  margin-top: 15px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #28a745;
+  color: #495057;
+  font-size: 14px;
+}
+
+.users-list-section {
+  margin-top: 20px;
+}
+
+.users-list-section h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
 }
 </style>

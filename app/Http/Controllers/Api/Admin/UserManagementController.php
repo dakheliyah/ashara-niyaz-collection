@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\CollectorSession;
+use App\Models\Role;
+use App\Models\Mumineen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class UserManagementController extends Controller
 {
@@ -186,6 +189,84 @@ class UserManagementController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to check collector status',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Create a new user
+     */
+    public function store(Request $request)
+    {
+        try {
+            $request->validate([
+                'its_id' => 'required|unique:admins,its_id',
+                'role' => 'required|in:admin,collector',
+            ]);
+
+            // Get role ID
+            $role = Role::where('name', $request->role)->first();
+            if (!$role) {
+                return response()->json(['error' => 'Invalid role'], 400);
+            }
+
+            // Check if mumineen exists
+            $mumineen = Mumineen::where('its_id', $request->its_id)->first();
+            if (!$mumineen) {
+                return response()->json(['error' => 'ITS ID not found in mumineen database'], 400);
+            }
+
+            // Generate a unique token
+            $token = base64_encode(random_bytes(32));
+
+            // Create the admin user
+            $user = Admin::create([
+                'its_id' => $request->its_id,
+                'role_id' => $role->id,
+                'token' => $token,
+                'status' => 'active',
+                'created_by' => $request->attributes->get('its_id'), // Current admin's ITS ID
+            ]);
+
+            // Load the user with role for response
+            $user->load('role');
+
+            return response()->json([
+                'message' => 'User created successfully',
+                'user' => $user,
+                'fullname' => $mumineen->fullname,
+                'token' => $token // Return token so admin can share it
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to create user',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get mumineen data by ITS ID
+     */
+    public function getMumineen($itsId)
+    {
+        try {
+            $mumineen = Mumineen::where('its_id', $itsId)->first();
+            
+            if ($mumineen) {
+                return response()->json([
+                    'its_id' => $mumineen->its_id,
+                    'fullname' => $mumineen->fullname
+                ]);
+            } else {
+                return response()->json([
+                    'error' => 'Mumineen not found'
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to fetch mumineen data',
                 'message' => $e->getMessage()
             ], 500);
         }
