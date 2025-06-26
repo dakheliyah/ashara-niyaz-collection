@@ -30,6 +30,7 @@ class DetailedReportExport implements FromCollection, WithHeadings, WithMapping
     {
         return [
             'Donation ID',
+            'Collector Name',
             'Session ID',
             'Date',
             'Donor ITS',
@@ -49,6 +50,7 @@ class DetailedReportExport implements FromCollection, WithHeadings, WithMapping
     {
         return [
             $donation->id,
+            $donation->collectorSession->collector->fullname ?? '',
             $donation->collector_session_id,
             $donation->donated_at,
             $donation->donor_its_id,

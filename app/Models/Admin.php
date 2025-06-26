@@ -3,6 +3,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Mumineen;
 class Admin extends Authenticatable
 {
     use HasFactory;
@@ -23,5 +24,13 @@ class Admin extends Authenticatable
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Get the mumineen record associated with the admin.
+     */
+    public function mumineen()
+    {
+        return $this->belongsTo(Mumineen::class, 'its_id', 'its_id');
     }
 }

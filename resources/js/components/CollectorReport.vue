@@ -42,7 +42,7 @@
             <tr>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector Name</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector ITS</th>
-              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session ID</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Sessions</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Donations</th>
               <th v-for="currency in currencies" :key="currency" class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 {{ currency }}
@@ -55,13 +55,13 @@
                     {{ loading ? 'Loading summary...' : 'No summary data available for the selected filters.' }}
                 </td>
             </tr>
-            <tr v-for="item in summaryReport" :key="item.session_id">
+            <tr v-for="item in summaryReport" :key="item.collector_its">
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.collector_name }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.collector_its }}</td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.session_id }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.total_sessions }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.total_donations }}</td>
               <td v-for="currency in currencies" :key="currency" class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                {{ item[currency] || '0' }}
+                {{ formatAmount(item[currency] || 0) }}
               </td>
             </tr>
           </tbody>
@@ -236,7 +236,14 @@ export default {
       return new Date(dateString).toLocaleDateString(undefined, options);
     },
     formatAmount(amount) {
-        return parseFloat(amount).toFixed(2);
+        const number = parseFloat(amount);
+        if (isNaN(number)) {
+            return '0.00';
+        }
+        return number.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
     }
   },
 };

@@ -8,53 +8,51 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class SummaryReportExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $data;
+    protected $summaryData;
+    protected $currencyCodes;
+    protected $headings;
 
-    public function __construct($data)
+    public function __construct($summaryData, $currencyCodes)
     {
-        $this->data = $data;
+        $this->summaryData = $summaryData;
+        $this->currencyCodes = $currencyCodes;
+
+        // Prepare headings dynamically
+        $this->headings = [
+            'Collector Name',
+            'Collector ITS',
+            'Total Sessions',
+            'Total Donations',
+        ];
+        foreach ($this->currencyCodes as $code) {
+            $this->headings[] = strtoupper($code);
+        }
     }
 
-    /**
-    * @return \Illuminate\Support\Collection
-    */
     public function collection()
     {
-        return $this->data;
+        return collect($this->summaryData);
     }
 
-    /**
-     * @return array
-     */
     public function headings(): array
     {
-        return [
-            'Session ID',
-            'Session Start',
-            'Session End',
-            'Total Donations',
-            'Total Amount',
-        ];
+        return $this->headings;
     }
 
-    /**
-     * @param mixed $row
-     *
-     * @return array
-     */
     public function map($row): array
     {
-        $totalAmountStrings = [];
-        foreach ($row->total_amount as $amount) {
-            $totalAmountStrings[] = number_format($amount->total, 2) . ' ' . $amount->currency_code;
+        $mappedRow = [
+            $row['collector_name'],
+            $row['collector_its'],
+            $row['total_sessions'],
+            $row['total_donations'],
+        ];
+
+        foreach ($this->currencyCodes as $code) {
+            // Append each currency total, defaulting to 0 if not present
+            $mappedRow[] = $row[$code] ?? 0;
         }
 
-        return [
-            $row->session_id,
-            $row->started_at,
-            $row->ended_at,
-            $row->total_donations,
-            implode(', ', $totalAmountStrings),
-        ];
+        return $mappedRow;
     }
 }
