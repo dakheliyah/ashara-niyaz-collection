@@ -1,10 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
+
 use App\Http\Controllers\Api\DonationController;
 
-Route::get('/auth', [AuthController::class, 'handleTokenLogin']);
+
 
 Route::get('/receipts/{uuid}', [DonationController::class, 'generateReceiptByUuid'])->name('receipt.public');
 

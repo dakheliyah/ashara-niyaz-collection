@@ -10,6 +10,8 @@ import RecordDonation from '../components/RecordDonation.vue';
 import EventDashboard from '../components/EventDashboard.vue';
 import UserManagement from '../components/UserManagement.vue';
 import CollectorReport from '../components/CollectorReport.vue';
+import AuthCallback from '../components/AuthCallback.vue';
+
 // Using window.axios for API calls with token authentication
 
 // Helper function to check user role
@@ -53,6 +55,11 @@ async function requireRole(allowedRoles) {
 }
 
 const routes = [
+    {
+        path: '/auth/callback',
+        name: 'AuthCallback',
+        component: AuthCallback,
+    },
     {
         path: '/',
         name: 'Dashboard',
