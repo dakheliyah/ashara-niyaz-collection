@@ -60,14 +60,26 @@
             <div class="form-group">
                 <label for="amount">Amount:</label>
                 <input 
-                    type="number" 
+                    type="text" 
                     id="amount" 
-                    v-model="form.amount" 
-                    step="0.01" 
-                    min="0" 
+                    v-model="displayAmount" 
                     required 
                     class="form-control amount-input"
-                    placeholder="0.00"
+                    placeholder="0"
+                    inputmode="numeric" 
+                />
+            </div>
+
+            <div v-if="selectedDonationType && selectedDonationType.tracks_count" class="form-group">
+                <label for="quantity">Quantity:</label>
+                <input 
+                    type="number" 
+                    id="quantity" 
+                    v-model.number="form.quantity"
+                    min="1"
+                    required
+                    class="form-control"
+                    placeholder="1"
                 />
             </div>
 
@@ -93,9 +105,10 @@ export default {
         return {
             form: {
                 donor_its_id: '',
-                donation_type_id: '',
-                currency_id: '',
-                amount: ''
+                donation_type_id: null,
+                currency_id: null,
+                amount: '',
+                quantity: 1, // Add quantity to form data
             },
             donationTypes: [],
             currencies: [],
@@ -111,8 +124,29 @@ export default {
         };
     },
     computed: {
+        // New computed property to easily access the selected donation type object
+        selectedDonationType() {
+            if (!this.form.donation_type_id) {
+                return null;
+            }
+            return this.donationTypes.find(type => type.id === this.form.donation_type_id);
+        },
         isFormValid() {
             return this.form.donor_its_id && this.form.donation_type_id && this.form.currency_id && this.form.amount;
+        },
+        displayAmount: {
+            get() {
+                if (this.form.amount === '' || this.form.amount === null || isNaN(this.form.amount)) {
+                    return '';
+                }
+                // Format with commas, as a whole number.
+                return Math.round(this.form.amount).toLocaleString('en-US');
+            },
+            set(value) {
+                // Remove non-digit characters and parse.
+                const numericValue = parseInt(String(value).replace(/[^0-9]/g, ''), 10);
+                this.form.amount = isNaN(numericValue) ? '' : numericValue;
+            }
         }
     },
     mounted() {
@@ -177,6 +211,12 @@ export default {
         selectDonationType(id) {
             this.form.donation_type_id = id;
             this.updateAmount();
+
+            // Reset quantity to 1 if the newly selected type does not track quantity
+            const selectedType = this.donationTypes.find(type => type.id === id);
+            if (selectedType && !selectedType.tracks_count) {
+                this.form.quantity = 1;
+            }
         },
         selectCurrency(id) {
             this.form.currency_id = id;
@@ -201,35 +241,34 @@ export default {
         },
         async submitDonation() {
             this.loading = true;
-            this.message = '';
+            this.message = ''; // Clear previous messages
             
             try {
-                const response = await window.axios.post('/api/donations', this.form);
+                await window.axios.post('/api/donations', this.form);
+                
                 this.message = 'Donation recorded successfully!';
                 this.messageClass = 'success';
-                
-                // Reset form fields individually for reactivity
+
+                // Reset the entire form for the next donation
                 this.form.donor_its_id = '';
-                this.form.donation_type_id = '';
-                this.form.currency_id = '';
+                this.form.donation_type_id = null;
+                this.form.currency_id = null;
                 this.form.amount = '';
+                this.form.quantity = 1; // Reset quantity
                 this.donorInfo = { fullname: null, email: null };
 
-                this.$emit('donation-recorded');
-
-                // Clear the message after 3 seconds
+                // Clear the success message after 3 seconds
                 setTimeout(() => {
                     this.message = '';
                 }, 3000);
-                
+
             } catch (error) {
                 this.message = error.response?.data?.message || 'Error recording donation';
                 this.messageClass = 'error';
-                console.error('Error submitting donation:', error);
-                // Clear the message after 3 seconds
+                 // Clear the error message after 5 seconds
                 setTimeout(() => {
                     this.message = '';
-                }, 3000);
+                }, 5000);
             } finally {
                 this.loading = false;
             }
@@ -297,10 +336,12 @@ export default {
 
 .button-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
     margin-top: 10px;
 }
+
+
 
 .option-btn {
     padding: 15px 12px;

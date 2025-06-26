@@ -7,6 +7,7 @@ use App\Exports\DetailedReportExport;
 use App\Exports\SummaryReportExport;
 use App\Models\CollectorSession;
 use App\Models\Donation;
+use App\Models\DonationType;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Currency;
@@ -58,6 +59,25 @@ class ReportController extends Controller
         list($summary, $currencyCodes) = $this->getAggregatedSummaryData($request);
 
         return Excel::download(new SummaryReportExport($summary, $currencyCodes), 'collector-summary-report.csv', \Maatwebsite\Excel\Excel::CSV);
+    }
+
+    public function getZabihatCount(Request $request)
+    {
+        $zabihatType = DonationType::where('name', 'Zabihat')->first();
+
+        if (!$zabihatType) {
+            return response()->json(['total_zabihat' => 0]);
+        }
+
+        $query = Donation::where('donation_type_id', $zabihatType->id);
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('donated_at', [$request->input('start_date'), $request->input('end_date')]);
+        }
+
+        $totalZabihat = $query->sum('quantity');
+
+        return response()->json(['total_zabihat' => (int)$totalZabihat]);
     }
 
     private function getAggregatedSummaryData(Request $request)

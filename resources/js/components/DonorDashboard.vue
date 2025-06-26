@@ -23,14 +23,20 @@
               <tr>
                 <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Date</th>
                 <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Type</th>
-                <th class="text-right py-3 px-4 uppercase font-semibold text-sm">Amount</th>
+                                <th class="text-right py-3 px-4 uppercase font-semibold text-sm">Amount</th>
+                <th class="text-center py-3 px-4 uppercase font-semibold text-sm">Actions</th>
               </tr>
             </thead>
             <tbody class="text-gray-700">
               <tr v-for="donation in donations" :key="donation.id" class="border-b hover:bg-gray-100">
                 <td class="text-left py-3 px-4">{{ formatDate(donation.donated_at) }}</td>
                 <td class="text-left py-3 px-4">{{ donation.donation_type.name }}</td>
-                <td class="text-right py-3 px-4 font-mono">{{ donation.currency.symbol }} {{ parseFloat(donation.amount).toFixed(2) }}</td>
+                                <td class="text-right py-3 px-4 font-mono">{{ donation.currency.symbol }} {{ parseFloat(donation.amount).toFixed(2) }}</td>
+                <td class="text-center py-3 px-4">
+                  <button @click="printReceipt(donation.uuid)" class="print-receipt-btn">
+                    🖨️ Print
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -71,9 +77,29 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
+const printReceipt = (uuid) => {
+  if (!uuid) return;
+  // This now points to the public, non-API route
+  const url = `/receipts/${uuid}`;
+  window.open(url, '_blank');
+};
+
 onMounted(fetchDonations);
 </script>
 
 <style scoped>
-/* Scoped styles for the component */
+.print-receipt-btn {
+    background-color: #4a5568; /* a neutral gray */
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.print-receipt-btn:hover {
+    background-color: #2d3748; /* a darker gray */
+}
 </style>

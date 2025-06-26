@@ -14,7 +14,15 @@ class DonationTypeSeeder extends Seeder
      */
     public function run(): void
     {
-        DonationType::create(['name' => 'Niyaz e Hussain']);
-        DonationType::create(['name' => 'Zabihat']);
+        // Using updateOrCreate to ensure idempotency and set the tracking flag
+        DonationType::updateOrCreate(
+            ['name' => 'Niyaz e Hussain'],
+            ['tracks_count' => false]
+        );
+
+        DonationType::updateOrCreate(
+            ['name' => 'Zabihat'],
+            ['tracks_count' => true]
+        );
     }
 }

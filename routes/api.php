@@ -52,6 +52,7 @@ Route::middleware('its.auth')->group(function () {
         Route::get('/collector/donations/export', [CollectorDonationReportController::class, 'exportDonations']);
         
         // Donation Routes (accessible by admin and collector via hierarchical permissions)
+        Route::get('/donors/search', [DonorController::class, 'search']);
         Route::post('/donations', [DonationController::class, 'store']);
         Route::get('/donation-types', [DonationTypeController::class, 'index']);
         Route::get('/currencies', [CurrencyController::class, 'index']);
@@ -81,6 +82,7 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     Route::get('/reports/detailed', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getDetailedReport']);
     Route::get('/reports/summary/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportSummary']);
     Route::get('/reports/detailed/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportDetailed']);
+    Route::get('/reports/zabihat-count', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getZabihatCount']);
     
     Route::post('/admins', [AdminController::class, 'store']);
     Route::put('/admins/{admin}', [AdminController::class, 'update']);
