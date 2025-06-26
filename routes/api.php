@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\SessionController;
 use App\Http\Controllers\Api\Admin\EventController;
 use App\Http\Controllers\Api\Admin\EventDashboardController;
 use App\Http\Controllers\Api\Admin\UserManagementController;
+use App\Http\Controllers\Api\Admin\CollectorReportController;
 use App\Http\Controllers\Api\CollectorSessionController;
 use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\Donor\DashboardController as DonorDashboardController;
@@ -89,6 +90,9 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     Route::put('/events/{event}', [EventController::class, 'update']);
     Route::put('/events/{event}/set-active', [EventController::class, 'setActive']);
     Route::put('/events/{event}/deactivate', [EventController::class, 'deactivate']);
+
+    // Collector Report Route
+    Route::get('/collector-report/{itsId}', [CollectorReportController::class, 'show']);
 });
 
 // Donor Dashboard Routes

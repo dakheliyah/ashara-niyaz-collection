@@ -93,36 +93,25 @@ function getCookieAlternative(name) {
 
 // Export a function to initialize authentication. This allows us to control the timing.
 export async function initializeAuth() {
-    console.log('[Bootstrap.js] Initializing authentication...');
-    let token;
-
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        console.log('[Bootstrap.js] Running on localhost. Using hardcoded admin token for development.');
-        token = 'geFp5FFAagw7YvRYNDiREj%2BC5wY1RjQWm9K%2FDxxTTPo%3D';
-    } else {
-        console.log('[Bootstrap.js] Running on production. Reading token from its_no cookie.');
-        token = getCookie('its_no');
-        console.log(`[Bootstrap.js] Token from 'its_no' cookie:`, token);
-    }
-
-    if (token) {
-        console.log('[Bootstrap.js] Token acquired. Setting axios header.');
-        window.axios.defaults.headers.common['Token'] = token;
-        window.authToken = token; // Also store it globally for access
-    } else {
-        console.log("[Bootstrap.js] No token found. Deleting token header.");
-        delete window.axios.defaults.headers.common['Token'];
-        window.authToken = null;
-    }
-    
-    console.log('[Bootstrap.js] Axios headers after init:', window.axios.defaults.headers.common);
-    console.log('[Bootstrap.js] Auth token is now globally available as window.authToken:', window.authToken);
+    console.log('[Bootstrap.js] initializeAuth() called. Token setup is now handled by the request interceptor.');
+    // This function is now just a placeholder to ensure app.js starts correctly.
+    // All token logic has been moved to the axios request interceptor.
 }
 
 // Add request interceptor to log outgoing requests
 window.axios.interceptors.request.use(
     function (config) {
+        // Read the token from the cookie before every request
+        const token = getCookie('its_no');
+        
+        // If a token exists, add it to the request headers
+        if (token) {
+            config.headers['Token'] = token;
+        } else {
+            // Ensure the header is removed if no token is found
+            delete config.headers['Token'];
+        }
+
         console.log('\n🚀 === OUTGOING API REQUEST ===');
         console.log('📍 URL:', config.url);
         console.log('🔧 Method:', config.method?.toUpperCase() || 'GET');

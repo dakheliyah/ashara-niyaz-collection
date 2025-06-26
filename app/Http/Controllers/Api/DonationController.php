@@ -15,7 +15,11 @@ class DonationController extends Controller
      */
     public function store(Request $request)
     {
-        $collectorItsId = $request->attributes->get('its_id');
+        $user = $request->attributes->get('admin');
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated.'], 401);
+        }
+        $collectorItsId = $user->its_id;
 
         // Find the collector's active session
         $session = CollectorSession::where('its_id', $collectorItsId)
@@ -29,11 +33,9 @@ class DonationController extends Controller
         // Validate the request data
         $validator = Validator::make($request->all(), [
             'donor_its_id' => 'required|string|max:8',
-            'whatsapp_number' => 'nullable|string|max:15',
             'donation_type_id' => 'required|exists:donation_types,id',
             'currency_id' => 'required|exists:currencies,id',
             'amount' => 'required|numeric|min:0',
-            'remarks' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -44,12 +46,10 @@ class DonationController extends Controller
         $donation = Donation::create([
             'collector_session_id' => $session->id,
             'donor_its_id' => $request->input('donor_its_id'),
-            'whatsapp_number' => $request->input('whatsapp_number'),
             'donation_type_id' => $request->input('donation_type_id'),
             'currency_id' => $request->input('currency_id'),
             'amount' => $request->input('amount'),
             'donated_at' => now(),
-            'remarks' => $request->input('remarks'),
         ]);
 
         return response()->json($donation, 201);

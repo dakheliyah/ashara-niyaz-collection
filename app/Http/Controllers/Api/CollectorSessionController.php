@@ -25,8 +25,8 @@ class CollectorSessionController extends Controller
             return response()->json(['message' => 'An active session for today already exists.'], 409); // 409 Conflict
         }
 
-        // For simplicity, we'll use the first event found. In a real app, you might pass the event ID.
-        $event = Event::first();
+        // Find the currently active event
+        $event = Event::where('is_active', true)->first();
         if (!$event) {
             return response()->json(['message' => 'No active event found.'], 404);
         }
@@ -44,7 +44,11 @@ class CollectorSessionController extends Controller
 
     public function endSession(Request $request)
     {
-        $itsId = $request->attributes->get('its_id');
+        $user = $request->attributes->get('admin');
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated.'], 401);
+        }
+        $itsId = $user->its_id;
 
         // Find the current active session for this collector
         $session = CollectorSession::where('its_id', $itsId)
@@ -65,7 +69,11 @@ class CollectorSessionController extends Controller
 
     public function status(Request $request)
     {
-        $itsId = $request->attributes->get('its_id');
+        $user = $request->attributes->get('admin');
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated.'], 401);
+        }
+        $itsId = $user->its_id;
         $today = Carbon::today();
 
         $session = CollectorSession::where('its_id', $itsId)

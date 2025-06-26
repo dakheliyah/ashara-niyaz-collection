@@ -14,7 +14,11 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        $donorItsId = $request->attributes->get('its_id');
+        $user = $request->attributes->get('admin');
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated.'], 401);
+        }
+        $donorItsId = $user->its_id;
 
         // Retrieve donations with their related type and currency
         $donations = Donation::with(['donationType', 'currency'])

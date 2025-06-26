@@ -25,16 +25,7 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="whatsapp_number">WhatsApp Number (Optional):</label>
-                <input 
-                    type="tel" 
-                    id="whatsapp_number" 
-                    v-model="form.whatsapp_number" 
-                    placeholder="e.g., +1234567890"
-                    class="form-control"
-                />
-            </div>
+
 
             <div class="form-group">
                 <label>Donation Type:</label>
@@ -94,13 +85,14 @@
 </template>
 
 <script>
+import { donationDefaults } from '../config.js';
+
 export default {
     name: 'RecordDonation',
     data() {
         return {
             form: {
                 donor_its_id: '',
-                whatsapp_number: '',
                 donation_type_id: '',
                 currency_id: '',
                 amount: ''
@@ -184,9 +176,28 @@ export default {
         },
         selectDonationType(id) {
             this.form.donation_type_id = id;
+            this.updateAmount();
         },
         selectCurrency(id) {
             this.form.currency_id = id;
+            this.updateAmount();
+        },
+        updateAmount() {
+            const { donation_type_id, currency_id } = this.form;
+
+            if (donation_type_id && currency_id) {
+                const selectedType = this.donationTypes.find(type => type.id === donation_type_id);
+                const selectedCurrency = this.currencies.find(curr => curr.id === currency_id);
+
+                if (selectedType && selectedCurrency) {
+                    const typeName = selectedType.name;
+                    const currencyCode = selectedCurrency.code; // Use code instead of name
+
+                    if (donationDefaults[typeName] && donationDefaults[typeName][currencyCode]) {
+                        this.form.amount = donationDefaults[typeName][currencyCode];
+                    }
+                }
+            }
         },
         async submitDonation() {
             this.loading = true;
@@ -200,7 +211,6 @@ export default {
                 // Reset form
                 this.form = {
                     donor_its_id: '',
-                    whatsapp_number: '',
                     donation_type_id: '',
                     currency_id: '',
                     amount: ''

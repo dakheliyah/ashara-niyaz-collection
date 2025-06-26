@@ -9,6 +9,7 @@ import ManageEvents from '../components/ManageEvents.vue';
 import RecordDonation from '../components/RecordDonation.vue';
 import EventDashboard from '../components/EventDashboard.vue';
 import UserManagement from '../components/UserManagement.vue';
+import CollectorReport from '../components/CollectorReport.vue';
 // Using window.axios for API calls with token authentication
 
 // Helper function to check user role
@@ -22,12 +23,32 @@ async function getUserRole() {
     }
 }
 
-// Route guard for role-based access
+// Route guard for role-based access with hierarchy
+const roleHierarchy = {
+    admin: ['admin', 'collector', 'donor'],
+    collector: ['collector', 'donor'],
+    donor: ['donor']
+};
+
 async function requireRole(allowedRoles) {
     const userRole = await getUserRole();
-    if (!userRole || !allowedRoles.includes(userRole)) {
-        return { name: 'Dashboard' }; // Redirect to main dashboard
+    if (!userRole) {
+        return { name: 'Dashboard' };
     }
+
+    const userPermissions = roleHierarchy[userRole];
+    if (!userPermissions) {
+        console.error(`Unknown user role: ${userRole}`);
+        return { name: 'Dashboard' };
+    }
+
+    // Check if the user's permission set has any of the roles required for the route
+    const hasAccess = userPermissions.some(permission => allowedRoles.includes(permission));
+
+    if (!hasAccess) {
+        return { name: 'Dashboard' };
+    }
+
     return true;
 }
 
@@ -47,7 +68,7 @@ const routes = [
         path: '/collector',
         name: 'CollectorDashboard',
         component: CollectorDashboard,
-        beforeEnter: async () => await requireRole(['collector']),
+        beforeEnter: async () => await requireRole(['admin', 'collector']),
     },
     {
         path: '/donor',
@@ -71,7 +92,7 @@ const routes = [
         path: '/record-donation',
         name: 'RecordDonation',
         component: RecordDonation,
-        beforeEnter: async () => await requireRole(['collector']),
+        beforeEnter: async () => await requireRole(['admin', 'collector']),
     },
     {
         path: '/events/:eventId/dashboard',
@@ -81,10 +102,16 @@ const routes = [
         beforeEnter: async () => await requireRole(['admin', 'collector', 'donor']),
     },
     {
-        path: '/user-management',
+        path: '/admin/users',
         name: 'UserManagement',
         component: UserManagement,
-        beforeEnter: async () => await requireRole(['admin']),
+        beforeEnter: async () => await requireRole(['admin'])
+    },
+    {
+        path: '/admin/collector-report',
+        name: 'CollectorReport',
+        component: CollectorReport,
+        beforeEnter: async () => await requireRole(['admin'])
     },
     {
         path: '/:pathMatch(.*)*',
