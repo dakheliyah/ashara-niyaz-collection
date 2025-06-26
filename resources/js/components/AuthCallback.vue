@@ -17,8 +17,13 @@ export default {
       let expires = "expires=" + d.toUTCString();
       document.cookie = `its_no=${encodeURIComponent(token)};${expires};path=/`;
       
-      // Redirect to the homepage/dashboard
-      window.location.href = '/';
+      // Immediately update the current axios instance so subsequent calls work
+      if (window.axios) {
+        window.axios.defaults.headers.common['Token'] = token;
+      }
+
+      // Use Vue router to redirect to avoid a full page reload
+      this.$router.push('/');
     } else {
       // Handle error: no token found
       console.error('Authentication token missing in callback.');
