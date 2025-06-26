@@ -12,7 +12,11 @@ class CollectorSessionController extends Controller
 {
     public function startSession(Request $request)
     {
-        $itsId = $request->attributes->get('its_id');
+        $user = $request->attributes->get('admin');
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated.'], 401);
+        }
+        $itsId = $user->its_id;
         $today = Carbon::today();
 
         // Check for an existing active session for the same ITS ID on the same day

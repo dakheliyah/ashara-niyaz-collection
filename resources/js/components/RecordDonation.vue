@@ -208,19 +208,28 @@ export default {
                 this.message = 'Donation recorded successfully!';
                 this.messageClass = 'success';
                 
-                // Reset form
-                this.form = {
-                    donor_its_id: '',
-                    donation_type_id: '',
-                    currency_id: '',
-                    amount: ''
-                };
+                // Reset form fields individually for reactivity
+                this.form.donor_its_id = '';
+                this.form.donation_type_id = '';
+                this.form.currency_id = '';
+                this.form.amount = '';
                 this.donorInfo = { fullname: null, email: null };
+
+                this.$emit('donation-recorded');
+
+                // Clear the message after 3 seconds
+                setTimeout(() => {
+                    this.message = '';
+                }, 3000);
                 
             } catch (error) {
                 this.message = error.response?.data?.message || 'Error recording donation';
                 this.messageClass = 'error';
                 console.error('Error submitting donation:', error);
+                // Clear the message after 3 seconds
+                setTimeout(() => {
+                    this.message = '';
+                }, 3000);
             } finally {
                 this.loading = false;
             }

@@ -5,12 +5,11 @@
       <nav v-if="user">
         <div class="nav-links">
           <router-link :to="getDashboardRoute()" class="nav-link">{{ getDashboardLabel() }}</router-link>
-          <router-link v-if="user.role === 'admin'" to="/collector" class="nav-link">Collector Dashboard</router-link>
-          <router-link v-if="user.role === 'admin'" to="/create-event" class="nav-link">Create Event</router-link>
-          <router-link v-if="user.role === 'admin'" to="/manage-events" class="nav-link">Manage Events</router-link>
-          <router-link v-if="user.role === 'admin'" to="/record-donation" class="nav-link">Record Donation</router-link>
-          <router-link v-if="user && user.role === 'admin'" to="/admin/users" class="nav-link">User Management</router-link>
-          <router-link v-if="user && user.role === 'admin'" to="/admin/collector-report" class="nav-link">Collector Report</router-link>
+          <router-link v-if="user.permissions && user.permissions.can_view_collector_dashboard_link" to="/collector" class="nav-link">Collector Dashboard</router-link>
+          <router-link v-if="user.permissions && user.permissions.can_create_events" to="/create-event" class="nav-link">Create Event</router-link>
+          <router-link v-if="user.permissions && user.permissions.can_manage_events" to="/manage-events" class="nav-link">Manage Events</router-link>
+          <router-link v-if="user.permissions && user.permissions.can_manage_users" to="/admin/users" class="nav-link">User Management</router-link>
+          <router-link v-if="user.permissions && user.permissions.can_view_collector_report" to="/admin/collector-report" class="nav-link">Collector Report</router-link>
         </div>
         <div class="user-info">
           <div class="user-role">{{ getRoleLabel() }} ({{ user.its_id }})</div>

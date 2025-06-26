@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Admin\UserManagementController;
 use App\Http\Controllers\Api\Admin\CollectorReportController;
 use App\Http\Controllers\Api\CollectorSessionController;
 use App\Http\Controllers\Api\DonationController;
+use App\Http\Controllers\Api\Collector\CollectorReportController as CollectorDonationReportController;
 use App\Http\Controllers\Api\Donor\DashboardController as DonorDashboardController;
 use App\Http\Controllers\Api\DonationTypeController;
 use App\Http\Controllers\Api\CurrencyController;
@@ -21,24 +22,22 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware('its.auth')->get('/me', function (Request $request) {
-    $admin = $request->attributes->get('admin');
-    
-    // Look up the full name from mumineen table
-    $mumineen = \App\Models\Mumineen::where('its_id', $admin->its_id)->first();
-    $fullName = $mumineen ? $mumineen->fullname : null;
-    
+    $user = $request->attributes->get('admin');
+
     return response()->json([
-        'id' => $admin->id,
-        'its_id' => $admin->its_id,
-        'fullname' => $fullName,
-        'role' => $admin->role->name,
+        'id' => $user->id,
+        'its_id' => $user->its_id,
+        'fullname' => $user->fullname,
+        'role' => $user->role,
         'permissions' => [
-            'can_create_events' => in_array($admin->role->name, ['admin']),
-            'can_manage_events' => in_array($admin->role->name, ['admin']),
-            'can_record_donations' => in_array($admin->role->name, ['admin', 'collector']),
-            'can_view_sessions' => in_array($admin->role->name, ['admin', 'collector']),
-            'can_access_admin' => in_array($admin->role->name, ['admin']),
-            'can_manage_users' => in_array($admin->role->name, ['admin']),
+            'can_create_events' => in_array($user->role, ['admin']),
+            'can_manage_events' => in_array($user->role, ['admin']),
+            'can_record_donations' => in_array($user->role, ['admin', 'collector']),
+            'can_view_sessions' => in_array($user->role, ['admin', 'collector']),
+            'can_access_admin' => in_array($user->role, ['admin']),
+            'can_manage_users' => in_array($user->role, ['admin']),
+            'can_view_collector_report' => in_array($user->role, ['admin']),
+            'can_view_collector_dashboard_link' => in_array($user->role, ['admin']),
         ]
     ]);
 });
@@ -46,9 +45,11 @@ Route::middleware('its.auth')->get('/me', function (Request $request) {
 Route::middleware('its.auth')->group(function () {
     // Collector Session Routes (for users with 'collector' role)
     Route::middleware('role:collector')->group(function () {
-        Route::get('/collector-sessions/status', [CollectorSessionController::class, 'status']);
         Route::post('/collector-sessions/start', [CollectorSessionController::class, 'startSession']);
         Route::post('/collector-sessions/end', [CollectorSessionController::class, 'endSession']);
+        Route::get('/collector-sessions/status', [CollectorSessionController::class, 'status']);
+        Route::get('/collector/donations', [\App\Http\Controllers\Api\Collector\DashboardController::class, 'getDonations']);
+        Route::get('/collector/donations/export', [CollectorDonationReportController::class, 'exportDonations']);
         
         // Donation Routes (accessible by admin and collector via hierarchical permissions)
         Route::post('/donations', [DonationController::class, 'store']);
@@ -68,15 +69,18 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     Route::post('/sessions/{sessionId}/reconcile', [EventDashboardController::class, 'reconcileSession']);
     
     // User management routes
-    Route::middleware('role:admin')->group(function () {
-        Route::get('/users', [UserManagementController::class, 'index']);
-        Route::post('/users', [UserManagementController::class, 'store']);
-        Route::post('/users/{userId}/deactivate', [UserManagementController::class, 'deactivate']);
-        Route::post('/users/{userId}/archive', [UserManagementController::class, 'archive']);
-        Route::post('/users/{userId}/activate', [UserManagementController::class, 'activate']);
-        Route::get('/collectors/{itsId}/status', [UserManagementController::class, 'checkCollectorStatus']);
-        Route::get('/mumineen/{itsId}', [UserManagementController::class, 'getMumineen']);
-    });
+    Route::get('/users', [UserManagementController::class, 'index']);
+    Route::post('/users', [UserManagementController::class, 'store']);
+    Route::put('/users/{id}/activate', [UserManagementController::class, 'activate']);
+    Route::put('/users/{id}/deactivate', [UserManagementController::class, 'deactivate']);
+    Route::delete('/users/{id}', [UserManagementController::class, 'archive']);
+    Route::get('/mumineen/{itsId}', [UserManagementController::class, 'getMumineenByItsId']);
+
+    // Reports
+    Route::get('/reports/summary', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getSummaryReport']);
+    Route::get('/reports/detailed', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getDetailedReport']);
+    Route::get('/reports/summary/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportSummary']);
+    Route::get('/reports/detailed/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportDetailed']);
     
     Route::post('/admins', [AdminController::class, 'store']);
     Route::put('/admins/{admin}', [AdminController::class, 'update']);
@@ -91,8 +95,9 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     Route::put('/events/{event}/set-active', [EventController::class, 'setActive']);
     Route::put('/events/{event}/deactivate', [EventController::class, 'deactivate']);
 
-    // Collector Report Route
-    Route::get('/collector-report/{itsId}', [CollectorReportController::class, 'show']);
+    // Collector Report Routes
+    Route::get('/reports/collector/detailed', [CollectorReportController::class, 'getDetailedReport']);
+    Route::get('/reports/collector/summary', [CollectorReportController::class, 'getSummaryReport']);
 });
 
 // Donor Dashboard Routes

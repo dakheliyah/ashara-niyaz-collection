@@ -4,7 +4,9 @@ namespace App\Http\Middleware;
 
 use App\Models\Admin;
 use App\Models\Mumineen;
+use App\Http\AuthenticatedUser;
 use Closure;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -31,38 +33,29 @@ class ItsAuthMiddleware
         $token = urldecode($token);
 
         $decryptedToken = $this->decrypt($token);
-        error_log("Decrypted Token from middleware: $decryptedToken");
 
-        // Find the user in the Admin table first
-        $user = Admin::with('role')->where('its_id', $decryptedToken)->first();
-
-        if (!$user) {
-            // If not found in Admin, check the Mumineen table
-            $mumin = Mumineen::where('its_id', $decryptedToken)->first();
-
-            if ($mumin) {
-                // If found in Mumineen, create a temporary user object with a 'donor' role
-                $user = new Admin(); // Use Admin model for structure
-                $user->its_id = $mumin->its_id;
-                $user->name = $mumin->name; // Assuming a 'name' attribute on Mumineen
-                $user->setRelation('role', (object)['name' => 'donor']);
-                error_log("User found in Mumineen table: " . $mumin->its_id);
-            } else {
-                // If not found in either table, the token is invalid
-                error_log("User not found in Admin or Mumineen table for ITS: " . $decryptedToken);
-                return response()->json(['message' => 'Invalid token.'], 401);
-            }
-        } else {
-            error_log("User found in Admin table: " . $user->its_id);
+        if ($decryptedToken === false || $decryptedToken === null) {
+            return response()->json(['message' => 'Invalid token.'], 401);
         }
 
-        // Attach the user object and their role name to the request
-        $request->attributes->add([
-            'admin' => $user, // Keep 'admin' key for consistency
-            'role' => $user->role->name ?? null,
-        ]);
+        // Find the user in the Admin table first
+        $user = Admin::where('its_id', $decryptedToken)->first();
 
-        return $next($request);
+        // If not found in Admin, check the Mumineen table
+        if (!$user) {
+            $user = Mumineen::where('its_id', $decryptedToken)->first();
+        }
+
+        if ($user) {
+            Auth::setUser($user);
+
+            // Use the AuthenticatedUser class to standardize the user object
+            $request->attributes->add(['admin' => new AuthenticatedUser($user)]);
+            return $next($request);
+        }
+
+        // If not found in either table, the token is invalid
+        return response()->json(['message' => 'User not found.'], 401);
     }
 
     /**

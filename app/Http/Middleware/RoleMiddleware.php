@@ -15,13 +15,15 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        // This assumes that a preceding middleware (ItsAuthMiddleware) has already
-        // authenticated the user and attached their role to the request.
-        $userRole = $request->attributes->get('role');
+        // This assumes that ItsAuthMiddleware has already authenticated the user
+        // and attached an AuthenticatedUser object to the request.
+        $user = $request->attributes->get('admin');
 
-        if (!$userRole) {
+        if (!$user || !property_exists($user, 'role')) {
             return response()->json(['message' => 'This action is unauthorized.'], 403);
         }
+
+        $userRole = $user->role;
 
         // Implement hierarchical permissions: admins can access collector features
         $hasPermission = false;

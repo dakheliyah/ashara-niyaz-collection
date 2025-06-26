@@ -18,7 +18,8 @@ class Donation extends Model
         'donation_type_id',
         'currency_id',
         'amount',
-        'donated_at',
+        'date',
+        'collected_by',
         'receipt_url',
         'remarks',
     ];
@@ -45,5 +46,13 @@ class Donation extends Model
     public function collectorSession()
     {
         return $this->belongsTo(\App\Models\CollectorSession::class);
+    }
+
+    /**
+     * Get the donor for the donation.
+     */
+    public function donor()
+    {
+        return $this->belongsTo(Mumineen::class, 'donor_its_id', 'its_id');
     }
 }

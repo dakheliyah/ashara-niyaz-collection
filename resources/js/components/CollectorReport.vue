@@ -1,167 +1,243 @@
 <template>
-  <div class="collector-report-container">
-    <h2 class="report-title">Collector Report</h2>
-    <div class="report-form-card">
-      <div class="form-group">
-        <label for="event-select">Select Event:</label>
-        <select id="event-select" v-model="selectedEventId" class="form-control">
-          <option value="">All Events</option>
-          <option v-for="event in events" :key="event.id" :value="event.id">
-            {{ event.name }}
-          </option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="collector-its-id">Collector's ITS ID:</label>
-        <input 
-          type="text" 
-          id="collector-its-id" 
-          v-model="itsId"
-          placeholder="Enter ITS ID"
-          class="form-control"
-        />
-      </div>
-      <button @click="getReport" :disabled="loading || !itsId" class="btn-submit">
-        <span v-if="loading">Loading...</span>
-        <span v-else>Generate Report</span>
-      </button>
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Collector Reports</h1>
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded-lg shadow mb-4 flex items-end space-x-4">
+        <div>
+            <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+            <input type="date" id="start_date" v-model="filters.startDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <div>
+            <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+            <input type="date" id="end_date" v-model="filters.endDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <div>
+            <label for="collector_its" class="block text-sm font-medium text-gray-700">Collector ITS</label>
+            <input type="text" id="collector_its" v-model="filters.collectorIts" placeholder="Enter ITS ID" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <div>
+             <button @click="applyFilters" :disabled="loading" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-blue-300">
+                {{ loading ? 'Loading...' : 'Apply Filters' }}
+            </button>
+        </div>
     </div>
 
-    <div v-if="reportData" class="report-results-card">
-      <h3 class="results-title">Report for ITS: {{ reportData.its_id }}</h3>
-      <div v-if="reportData.collections.length">
-        <ul class="currency-list">
-          <li v-for="(item, index) in reportData.collections" :key="index" class="currency-item">
-            <span class="currency-name">{{ item.currency_name }} ({{ item.currency_code }})</span>
-            <span class="currency-total">{{ formatAmount(item.total_amount) }}</span>
-          </li>
-        </ul>
+    <!-- Error Display -->
+    <div v-if="error" class="my-4 p-4 bg-red-100 text-red-700 border border-red-400 rounded-lg">
+        <p><strong>Error:</strong> {{ error }}</p>
+    </div>
+
+    <!-- Summary Report -->
+    <div class="mb-8">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Collection Summary</h2>
+        <button @click="exportSummary" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+          Export Summary
+        </button>
       </div>
-      <div v-else class="no-data-message">
-        No collections found for this ITS ID.
+      <div class="overflow-x-auto bg-white rounded-lg shadow">
+        <table class="min-w-full leading-normal">
+          <thead>
+            <tr>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector Name</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector ITS</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session ID</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Donations</th>
+              <th v-for="currency in currencies" :key="currency" class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                {{ currency }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="summaryReport.length === 0">
+                <td :colspan="4 + currencies.length" class="text-center py-10 text-gray-500">
+                    {{ loading ? 'Loading summary...' : 'No summary data available for the selected filters.' }}
+                </td>
+            </tr>
+            <tr v-for="item in summaryReport" :key="item.session_id">
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.collector_name }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.collector_its }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.session_id }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.total_donations }}</td>
+              <td v-for="currency in currencies" :key="currency" class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                {{ item[currency] || '0' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    
-    <div v-if="error" class="error-message">
-      {{ error }}
+
+    <!-- Detailed Report -->
+    <div>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Detailed Donations Report</h2>
+        <button @click="exportDetailed" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+          Export Detailed
+        </button>
+      </div>
+      <div class="overflow-x-auto bg-white rounded-lg shadow">
+        <table class="min-w-full leading-normal">
+          <thead>
+            <tr>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donation ID</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session ID</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donor ITS</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donor Name</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="detailedReport.data.length === 0">
+                <td colspan="8" class="text-center py-10 text-gray-500">
+                    {{ loading ? 'Loading details...' : 'No detailed donations available for the selected filters.' }}
+                </td>
+            </tr>
+            <tr v-for="donation in detailedReport.data" :key="donation.id">
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.id }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.collector_session.collector.fullname }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.collector_session_id }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatDate(donation.donated_at) }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor_its_id }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor.fullname }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donation_type.name }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatAmount(donation.amount) }} {{ donation.currency.code }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div class="px-5 py-5 bg-white border-t flex flex-col xs:flex-row items-center xs:justify-between">
+        <div class="inline-flex mt-2 xs:mt-0">
+          <button @click="fetchDetailedReport(detailedReport.prev_page_url)" :disabled="!detailedReport.prev_page_url" class="text-sm bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-l disabled:opacity-50">
+            Prev
+          </button>
+          <button @click="fetchDetailedReport(detailedReport.next_page_url)" :disabled="!detailedReport.next_page_url" class="text-sm bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-r disabled:opacity-50">
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import { saveAs } from 'file-saver';
+
 export default {
   data() {
     return {
-      itsId: '',
+      summaryReport: [],
+      currencies: [],
+      detailedReport: {
+        data: [],
+      },
+      filters: {
+        startDate: '',
+        endDate: '',
+        collectorIts: '',
+      },
       loading: false,
-      reportData: null,
       error: null,
-      events: [],
-      selectedEventId: '',
     };
   },
-  mounted() {
-    this.fetchEvents();
+  created() {
+    this.applyFilters();
   },
   methods: {
-    async fetchEvents() {
-      try {
-        const response = await window.axios.get('/api/admin/events');
-        this.events = response.data;
-      } catch (error) {
-        console.error('Failed to fetch events:', error);
-        this.error = 'Could not load events.';
-      }
+    applyFilters() {
+      this.fetchSummaryReport();
+      this.fetchDetailedReport('/api/admin/reports/detailed');
     },
-    async getReport() {
-      if (!this.itsId) return;
+    async fetchSummaryReport() {
       this.loading = true;
-      this.reportData = null;
       this.error = null;
       try {
-        let url = `/api/admin/collector-report/${this.itsId}`;
-        if (this.selectedEventId) {
-          url += `?event_id=${this.selectedEventId}`;
-        }
-        const response = await window.axios.get(url);
-        this.reportData = response.data;
-      } catch (err) {
-        this.error = err.response?.data?.message || 'An error occurred while fetching the report.';
+        const params = {
+            start_date: this.filters.startDate,
+            end_date: this.filters.endDate,
+            collector_its: this.filters.collectorIts,
+        };
+        const response = await window.axios.get('/api/admin/reports/summary', { params });
+        this.summaryReport = response.data.summary;
+        this.currencies = response.data.currencies;
+      } catch (error) {
+        console.error('Error fetching summary report:', error);
+        this.error = 'Failed to load summary report. Please try again.';
+      } finally {
+        this.loading = false;
       }
-      this.loading = false;
+    },
+    async fetchDetailedReport(url) {
+      if (!url) return;
+      this.loading = true;
+      this.error = null;
+      try {
+        const urlObject = new URL(url, window.location.origin);
+        if (this.filters.startDate) {
+            urlObject.searchParams.set('start_date', this.filters.startDate);
+        }
+        if (this.filters.endDate) {
+            urlObject.searchParams.set('end_date', this.filters.endDate);
+        }
+        if (this.filters.collectorIts) {
+            urlObject.searchParams.set('collector_its', this.filters.collectorIts);
+        }
+        const response = await window.axios.get(urlObject.pathname + urlObject.search);
+        this.detailedReport = response.data;
+      } catch (error) {
+        console.error('Error fetching detailed report:', error);
+        this.error = 'Failed to load detailed report. Please try again.';
+      } finally {
+        this.loading = false;
+      }
+    },
+    async exportSummary() {
+        try {
+            const params = {
+                start_date: this.filters.startDate,
+                end_date: this.filters.endDate,
+                collector_its: this.filters.collectorIts,
+            };
+            const response = await window.axios.get('/api/admin/reports/summary/export', {
+                responseType: 'blob', // Important
+                params
+            });
+            saveAs(new Blob([response.data]), 'collector-summary-report.csv');
+        } catch (error) {
+            console.error('Error exporting summary report:', error);
+            this.error = 'Failed to export summary report.';
+        }
+    },
+    async exportDetailed() {
+        try {
+            const params = {
+                start_date: this.filters.startDate,
+                end_date: this.filters.endDate,
+                collector_its: this.filters.collectorIts,
+            };
+            const response = await window.axios.get('/api/admin/reports/detailed/export', {
+                responseType: 'blob', // Important
+                params
+            });
+            saveAs(new Blob([response.data]), 'collector-detailed-report.csv');
+        } catch (error) {
+            console.error('Error exporting detailed report:', error);
+            this.error = 'Failed to export detailed report.';
+        }
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return new Date(dateString).toLocaleDateString(undefined, options);
     },
     formatAmount(amount) {
-      return new Intl.NumberFormat().format(amount);
-    },
+        return parseFloat(amount).toFixed(2);
+    }
   },
 };
 </script>
-
-<style scoped>
-.collector-report-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 2rem;
-}
-.report-title {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #2c3e50;
-}
-.report-form-card, .report-results-card {
-  background: #fff;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
-}
-.form-group {
-  margin-bottom: 1.5rem;
-}
-.form-control {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-.btn-submit {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-.btn-submit:disabled {
-  background-color: #a9cce3;
-  cursor: not-allowed;
-}
-.results-title {
-  margin-bottom: 1.5rem;
-}
-.currency-list {
-  list-style: none;
-  padding: 0;
-}
-.currency-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-}
-.currency-item:last-child {
-  border-bottom: none;
-}
-.currency-name {
-  font-weight: bold;
-}
-.error-message, .no-data-message {
-  text-align: center;
-  padding: 1rem;
-  color: #e74c3c;
-  background: #fbeae5;
-  border-radius: 4px;
-}
-</style>

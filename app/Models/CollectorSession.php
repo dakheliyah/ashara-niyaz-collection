@@ -47,6 +47,6 @@ class CollectorSession extends Model
      */
     public function donations()
     {
-        return $this->hasMany(Donation::class, 'session_id');
+        return $this->hasMany(Donation::class, 'collector_session_id');
     }
 }

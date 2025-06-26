@@ -49,7 +49,8 @@ class DonationController extends Controller
             'donation_type_id' => $request->input('donation_type_id'),
             'currency_id' => $request->input('currency_id'),
             'amount' => $request->input('amount'),
-            'donated_at' => now(),
+            'date' => now(),
+            'collected_by' => $collectorItsId,
         ]);
 
         return response()->json($donation, 201);
