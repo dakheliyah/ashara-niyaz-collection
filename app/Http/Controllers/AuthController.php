@@ -15,19 +15,19 @@ class AuthController extends Controller
      */
     public function handleTokenLogin(Request $request)
     {
-        if (!$request->has('token')) {
+        if (!$request->has('its_no')) {
             // If no token is present, redirect to the login page with an error.
             return redirect('/login')->with('error', 'Authentication token is missing.');
         }
 
-        $token = $request->input('token');
+        $itsNo = $request->input('its_no');
 
         // Create a new cookie with the token.
         // The cookie will be httpOnly for security, and will expire in 24 hours (1440 minutes).
-        $cookie = Cookie::make('its_no', $token, 1440, null, null, false, true);
+        $cookie = Cookie::make('its_no', $itsNo, 1440, null, null, false, true);
 
-        // Redirect to the dashboard with the cookie.
-        return redirect('/dashboard')->withCookie($cookie);
+        // Redirect to the homepage with the cookie.
+        return redirect('/')->withCookie($cookie);
     }
 }
 
