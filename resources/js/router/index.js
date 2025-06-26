@@ -9,12 +9,12 @@ import ManageEvents from '../components/ManageEvents.vue';
 import RecordDonation from '../components/RecordDonation.vue';
 import EventDashboard from '../components/EventDashboard.vue';
 import UserManagement from '../components/UserManagement.vue';
-import axios from 'axios';
+// Using window.axios for API calls with token authentication
 
 // Helper function to check user role
 async function getUserRole() {
     try {
-        const response = await axios.get('/api/me');
+        const response = await window.axios.get('/api/me');
         return response.data.role;
     } catch (error) {
         console.error('Error fetching user role:', error);

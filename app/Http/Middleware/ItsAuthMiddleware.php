@@ -30,6 +30,8 @@ class ItsAuthMiddleware
         $token = urldecode($token);
 
         $decryptedToken = $this->decrypt($token);
+        error_log("Decrypted Token: $decryptedToken");
+        error_log("Token: $token");
 
         // Find the admin by its_id (decrypted from token)
         $admin = Admin::with('role')->where('its_id', $decryptedToken)->first();

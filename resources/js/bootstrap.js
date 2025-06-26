@@ -91,111 +91,33 @@ function getCookieAlternative(name) {
     return null;
 }
 
-// Determine if we're running on localhost
-const isLocalhost = window.location.hostname === 'localhost';
+// Export a function to initialize authentication. This allows us to control the timing.
+export async function initializeAuth() {
+    console.log('[Bootstrap.js] Initializing authentication...');
+    let token;
 
-console.log('=== AUTHENTICATION DEBUG INFO ===');
-console.log('Current hostname:', window.location.hostname);
-console.log('Is localhost:', isLocalhost);
-console.log('Current URL:', window.location.href);
-
-let token;
-
-if (isLocalhost) {
-    console.log('✅ Using hardcoded admin token for localhost development');
-} else {
-    // Get authentication token from its_no cookie for production
-    console.log('🌐 Production environment detected');
-    console.log('📋 All cookies:', document.cookie);
-    
-    // Try to get the token from cookie
-    token = getCookie('its_no');
-    console.log('🔑 Token from its_no cookie:', token ? `Found (${token.length} chars)` : 'NOT FOUND');
-    
-    if (!token) {
-        console.error('❌ its_no cookie not found with primary method!');
-        console.log('🔄 Trying fallback methods...');
-        
-        // Try regex-based parsing
-        token = getCookieRegex('its_no');
-        
-        if (!token) {
-            // Try alternative parsing method
-            token = getCookieAlternative('its_no');
-        }
-        
-        if (token) {
-            console.log('✅ Token found using fallback method!');
-        } else {
-            console.error('❌ All cookie parsing methods failed!');
-            console.log('Available cookies:', document.cookie);
-            
-            // Try alternative cookie names or methods
-            const allCookies = document.cookie.split(';');
-            console.log('All individual cookies:');
-            allCookies.forEach(cookie => {
-                const [name, value] = cookie.trim().split('=');
-                console.log(`  - "${name}": ${value ? value.substring(0, 20) + '...' : 'empty'}`);
-            });
-            
-            // Check for common variations of the cookie name
-            const variations = ['its_no', 'its-no', 'itsno', 'ITS_NO', 'token', 'auth_token'];
-            console.log('🔍 Checking cookie name variations:');
-            variations.forEach(variation => {
-                const testToken = getCookie(variation);
-                if (testToken) {
-                    console.log(`✅ Found token with variation "${variation}":`, testToken.substring(0, 20) + '...');
-                    token = testToken; // Use the first found variation
-                }
-            });
-        }
-    }
-}
-
-if (token) {
-    let finalToken;
-    
-    console.log('🔍 Token processing debug:');
-    console.log('Raw token from cookie:', token);
-    console.log('Token length:', token.length);
-    console.log('Is localhost:', isLocalhost);
-    
-    if (isLocalhost) {
-        // For localhost, use the token from cookie as-is (no hardcoding)
-        finalToken = token;
-        console.log('🔧 Using cookie token for localhost');
-        
-        // Try both URL-encoded and decoded versions to see which works
-        console.log('🧪 Testing token variations:');
-        console.log('Option 1 - Raw token:', token);
-        console.log('Option 2 - URL encoded:', encodeURIComponent(token));
-        console.log('Option 3 - URL decoded:', decodeURIComponent(token));
-        
-        // Since we're getting "Invalid token", let's try URL encoding it
-        // The token might need to be URL-encoded for the API
-        const encodedToken = encodeURIComponent(token);
-        console.log('🔄 Trying URL-encoded version:', encodedToken);
-        finalToken = encodedToken;
-        
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        console.log('[Bootstrap.js] Running on localhost. Using hardcoded admin token for development.');
+        token = 'geFp5FFAagw7YvRYNDiREj%2BC5wY1RjQWm9K%2FDxxTTPo%3D';
     } else {
-        // Decode the URL-encoded token from cookie for production
-        finalToken = decodeURIComponent(token);
-        console.log('🔓 Decoded production token from cookie');
-        console.log('Original token length:', token.length);
-        console.log('Decoded token length:', finalToken.length);
+        console.log('[Bootstrap.js] Running on production. Reading token from its_no cookie.');
+        token = getCookie('its_no');
+        console.log(`[Bootstrap.js] Token from 'its_no' cookie:`, token);
+    }
+
+    if (token) {
+        console.log('[Bootstrap.js] Token acquired. Setting axios header.');
+        window.axios.defaults.headers.common['Token'] = token;
+        window.authToken = token; // Also store it globally for access
+    } else {
+        console.log("[Bootstrap.js] No token found. Deleting token header.");
+        delete window.axios.defaults.headers.common['Token'];
+        window.authToken = null;
     }
     
-    // Set the token in axios defaults
-    window.axios.defaults.headers.common['Token'] = finalToken;
-    window.authToken = finalToken; // Make token available globally
-    
-    console.log('✅ Authentication token configured successfully');
-    console.log('🔑 Final token being sent to API:', finalToken);
-    console.log('📡 Axios headers configured:', Object.keys(window.axios.defaults.headers.common));
-} else {
-    console.error('❌ Authentication token not found. API requests will fail.');
-    console.log('Environment:', isLocalhost ? 'localhost' : 'production');
-    console.log('Available cookies:', document.cookie);
+    console.log('[Bootstrap.js] Axios headers after init:', window.axios.defaults.headers.common);
+    console.log('[Bootstrap.js] Auth token is now globally available as window.authToken:', window.authToken);
 }
 
 // Add request interceptor to log outgoing requests
