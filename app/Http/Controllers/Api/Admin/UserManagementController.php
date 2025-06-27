@@ -244,12 +244,12 @@ class UserManagementController extends Controller
                 return response()->json(['error' => 'ITS ID not found in mumineen database'], 400);
             }
 
-            // Create the admin user (no token stored in DB)
+            // Create the admin user
             $user = Admin::create([
                 'its_id' => $request->its_id,
                 'role_id' => $role->id,
                 'status' => 'active',
-                'created_by' => $request->attributes->get('its_id'), // Current admin's ITS ID
+                'created_by' => auth()->user()->id,
             ]);
 
             // Load the user with role for response
