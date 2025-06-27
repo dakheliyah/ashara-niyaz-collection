@@ -48,7 +48,8 @@
             Export to CSV
           </button>
         </div>
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="bg-white shadow-md rounded-lg">
+          <div class="table-wrapper">
           <table class="min-w-full leading-normal">
             <thead>
               <tr>
@@ -77,6 +78,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
           <!-- Pagination -->
           <div v-if="donations.last_page > 1" class="px-5 py-5 bg-white border-t flex flex-col xs:flex-row items-center xs:justify-between">
             <div class="flex items-center">
@@ -210,5 +212,14 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+@media (max-width: 768px) {
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-wrapper table {
+    min-width: 800px;
+  }
 }
 </style>
