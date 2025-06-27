@@ -1,8 +1,11 @@
 <template>
   <div id="app-layout">
     <header class="main-header">
-      <h1>Ashara Niyaz Collection System</h1>
-      <nav v-if="user">
+      <div class="header-content">
+        <h1>Ashara Niyaz Collection System</h1>
+        <button @click="toggleMenu" class="hamburger-button" v-if="user">&#9776;</button>
+      </div>
+      <nav v-if="user" :class="{ 'is-open': isMenuOpen }">
         <div class="nav-links">
           <router-link :to="getDashboardRoute()" class="nav-link">{{ getDashboardLabel() }}</router-link>
           <router-link v-if="user.permissions && user.permissions.can_view_collector_dashboard_link" to="/collector" class="nav-link">Collector Dashboard</router-link>
@@ -10,10 +13,13 @@
           <router-link v-if="user.permissions && user.permissions.can_manage_events" to="/manage-events" class="nav-link">Manage Events</router-link>
           <router-link v-if="user.permissions && user.permissions.can_manage_users" to="/admin/users" class="nav-link">User Management</router-link>
           <router-link v-if="user.permissions && user.permissions.can_view_collector_report" to="/admin/collector-report" class="nav-link">Collector Report</router-link>
-        </div>
-        <div class="user-info">
-          <div class="user-role">{{ getRoleLabel() }} ({{ user.its_id }})</div>
-          <div v-if="user.fullname" class="full-name">{{ user.fullname }}</div>
+          <div class="user-info">
+            <div class="user-details">
+              <div class="user-role">{{ getRoleLabel() }} ({{ user.its_id }})</div>
+              <div v-if="user.fullname" class="full-name">{{ user.fullname }}</div>
+            </div>
+            <button @click="logout" class="logout-button">Logout</button>
+          </div>
         </div>
       </nav>
       <nav v-else-if="loading">
@@ -36,12 +42,23 @@ export default {
     return {
       user: null,
       loading: true,
+      isMenuOpen: false,
     };
   },
   async mounted() {
     await this.fetchUserInfo();
   },
   methods: {
+    toggleMenu() {
+      this.isMenuOpen = !this.isMenuOpen;
+    },
+    logout() {
+      // Clear the cookie by setting its expiry to a past date
+      document.cookie = "its_no=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      // Redirect to the external login page
+      window.location.href = 'https://colombo-relay.asharamubaraka.net/';
+    },
+
     async fetchUserInfo() {
       try {
         console.log('Fetching user info...');
@@ -130,15 +147,14 @@ export default {
 nav {
   margin-top: 10px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 nav .nav-links {
   display: flex;
   gap: 20px;
   align-items: center;
+  width: 100%;
 }
 
 nav .nav-link {
@@ -163,16 +179,20 @@ nav .nav-link.router-link-active {
 }
 
 .user-info {
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: bold;
-  font-style: italic;
-  margin-left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-left: auto;
+}
+
+.user-details {
   text-align: right;
 }
 
 .user-info .full-name {
   font-size: 0.9em;
   color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
 }
 
 .user-role {
@@ -192,5 +212,85 @@ nav .nav-link.router-link-active {
 
 .content {
   padding: 20px;
+}
+.logout-button {
+  background-color: #c0392b;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  height: fit-content;
+}
+
+.logout-button:hover {
+  background-color: #a93226;
+}
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hamburger-button {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 30px;
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .main-header {
+    position: relative;
+  }
+
+  .hamburger-button {
+    display: block;
+  }
+
+  .main-header nav {
+    display: none;
+  }
+
+  .main-header nav.is-open {
+    display: block;
+    position: absolute;
+    top: 85px; /* Adjust this value to match header height */
+    left: 0;
+    right: 0;
+    background: #2c3e50;
+    padding: 10px;
+    z-index: 1000;
+    border-top: 1px solid #34495e;
+  }
+
+  nav .nav-links {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  nav .nav-link {
+    text-align: left;
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .user-info {
+    margin-left: 0;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 15px;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .user-details {
+    text-align: left;
+  }
 }
 </style>

@@ -13,13 +13,13 @@
           <div class="form-group">
             <label for="its_id">ITS ID:</label>
             <input 
-              type="text" 
+              type="number" 
               id="its_id"
               v-model="newUser.its_id" 
               class="form-control"
               placeholder="Enter 8-digit ITS ID"
-              maxlength="8"
               @input="fetchUserName"
+              style="color: #000;"
             />
           </div>
           <div class="form-group">
@@ -246,7 +246,6 @@ export default {
         role: ''
       },
       fetchedUserName: '',
-      canCreateUser: false
     };
   },
   computed: {
@@ -254,19 +253,12 @@ export default {
       return this.users.reduce((total, user) => {
         return total + (user.unreconciled_sessions || 0);
       }, 0);
-    }
-  },
-  watch: {
-    'newUser.its_id': function(newVal) {
-      console.log('ITS ID changed:', newVal);
-      this.updateCanCreateUser();
-      if (newVal.length !== 8) {
-        this.fetchedUserName = '';
-      }
     },
-    'newUser.role': function(newVal) {
-      console.log('Role changed:', newVal);
-      this.updateCanCreateUser();
+    canCreateUser() {
+      const isItsValid = String(this.newUser.its_id).length === 8;
+      const isRoleSelected = this.newUser.role !== '';
+      const isNameFound = this.fetchedUserName && this.fetchedUserName !== 'Name not found in database';
+      return isItsValid && isRoleSelected && isNameFound;
     }
   },
   async mounted() {
@@ -303,18 +295,18 @@ export default {
       }
       
       try {
-        const response = await window.axios.post(`/api/admin/users/${userId}/deactivate`);
+        await window.axios.post(`/api/admin/users/${userId}/deactivate`);
         await this.loadUsers();
         alert('User deactivated successfully');
       } catch (error) {
         console.error('Error deactivating user:', error);
-        alert(error.message);
+        alert(error.response?.data?.message || 'Failed to deactivate user.');
       }
     },
     
     async activateUser(userId) {
       try {
-        const response = await window.axios.post(`/api/admin/users/${userId}/activate`);
+        await window.axios.post(`/api/admin/users/${userId}/activate`);
         await this.loadUsers();
         alert('User activated successfully');
       } catch (error) {
@@ -329,25 +321,24 @@ export default {
       }
       
       try {
-        const response = await window.axios.post(`/api/admin/users/${userId}/archive`);
+        await window.axios.post(`/api/admin/users/${userId}/archive`);
         await this.loadUsers();
         alert('User archived successfully');
       } catch (error) {
         console.error('Error archiving user:', error);
-        alert(error.message);
+        alert(error.response?.data?.message || 'Failed to archive user.');
       }
     },
     
     async viewCollectorSessions(itsId) {
       try {
-        // For now, we'll show the sessions from the user data
-        // In a real implementation, you might want to fetch detailed session data
         const user = this.users.find(u => u.its_id === itsId);
+        if (!user) return;
+
         this.selectedCollectorName = user.fullname || user.its_id;
         
-        // This would typically be a separate API call to get all sessions for the collector
-        // For now, we'll just show the recent session data we have
-        this.collectorSessions = user.recent_session ? [user.recent_session] : [];
+        const response = await window.axios.get(`/api/admin/collectors/${itsId}/sessions`);
+        this.collectorSessions = response.data.sessions;
         this.showSessionsModal = true;
       } catch (error) {
         console.error('Error loading collector sessions:', error);
@@ -362,55 +353,52 @@ export default {
     },
     
     async createUser() {
+      if (!this.canCreateUser) return;
       try {
         const response = await window.axios.post('/api/admin/users', this.newUser);
         await this.loadUsers();
         
-        // Show success message with token
-        const token = response.data.token;
-        const fullname = response.data.fullname;
+        const { token, fullname } = response.data;
         alert(`User created successfully!\n\nName: ${fullname}\nGenerated Token: ${token}\n\nPlease save this token securely and share it with the user. This is the only time it will be displayed.`);
         
-        // Reset form
-        this.newUser = {
-          its_id: '',
-          role: ''
-        };
+        this.newUser = { its_id: '', role: '' };
         this.fetchedUserName = '';
-        this.canCreateUser = false;
       } catch (error) {
         console.error('Error creating user:', error);
-        const errorMessage = error.response?.data?.message || error.message || 'Failed to create user';
+        const errorMessage = error.response?.data?.message || 'Failed to create user';
         alert(`Error: ${errorMessage}`);
       }
     },
     
     async fetchUserName() {
-      if (this.newUser.its_id.length === 8) {
+      if (String(this.newUser.its_id).length === 8) {
         try {
-          // Check if user already exists in mumineen table
           const response = await window.axios.get(`/api/admin/mumineen/${this.newUser.its_id}`);
-          if (response.data && response.data.fullname) {
-            this.fetchedUserName = response.data.fullname;
-          } else {
-            this.fetchedUserName = 'Name not found in database';
-          }
+          this.fetchedUserName = response.data?.fullname || 'Name not found in database';
         } catch (error) {
           this.fetchedUserName = 'Name not found in database';
         }
+      } else {
+        this.fetchedUserName = '';
       }
     },
-    
-    formatDateTime(dateString) {
-      if (!dateString) return '-';
-      return new Date(dateString).toLocaleString();
-    },
-    updateCanCreateUser() {
-      this.canCreateUser = this.newUser.its_id.length === 8 && this.newUser.role !== '';
-    },
+
     onRoleChange() {
-      console.log('Role changed to:', this.newUser.role);
-    }
+      // This method is intentionally left blank as the logic is handled by the `canCreateUser` computed property.
+    },
+
+    formatDateTime(dateTimeString) {
+      if (!dateTimeString) return 'N/A';
+      const options = {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true,
+      };
+      try {
+        return new Intl.DateTimeFormat('en-US', options).format(new Date(dateTimeString));
+      } catch (e) {
+        return dateTimeString;
+      }
+    },
   }
 };
 </script>

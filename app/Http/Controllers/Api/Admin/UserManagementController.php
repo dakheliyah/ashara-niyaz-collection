@@ -197,6 +197,33 @@ class UserManagementController extends Controller
     /**
      * Create a new user
      */
+    /**
+     * Get Mumineen by ITS ID
+     */
+    public function getMumineenByItsId($itsId)
+    {
+        try {
+            $mumineen = Mumineen::where('its_id', $itsId)->first();
+
+            if ($mumineen) {
+                return response()->json([
+                    'fullname' => $mumineen->fullname
+                ]);
+            }
+
+            return response()->json(['message' => 'Mumineen not found'], 404);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to fetch mumineen data',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Create a new user
+     */
     public function store(Request $request)
     {
         try {
