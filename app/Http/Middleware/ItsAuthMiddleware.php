@@ -53,7 +53,9 @@ class ItsAuthMiddleware
             $request->attributes->add(['admin' => new AuthenticatedUser($user)]);
             return $next($request);
         }
-
+        error_log("Token: " .  $token);
+        error_log("Decrypted Token: " .  $decryptedToken);
+        error_log("User: " .  $user);
         // If not found in either table, the token is invalid
         return response()->json(['message' => 'User not found.'], 401);
     }
