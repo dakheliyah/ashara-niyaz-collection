@@ -57,6 +57,13 @@
               </div>
             </div>
             <div class="stat-card">
+              <div class="stat-icon">🐏</div>
+              <div class="stat-content">
+                <h5>Total Zabihat</h5>
+                <p class="stat-number">{{ dashboardData.total_zabihat }}</p>
+              </div>
+            </div>
+            <div class="stat-card">
               <div class="stat-icon">🏦</div>
               <div class="stat-content">
                 <h5>Active Sessions</h5>

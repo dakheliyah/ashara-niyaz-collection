@@ -103,7 +103,7 @@
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.collector_session_id }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatDate(donation.donated_at) }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor_its_id }}</td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor.fullname }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor ? donation.donor.fullname : 'Not Found' }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donation_type.name }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatAmount(donation.amount) }} {{ donation.currency.code }}</td>
             </tr>

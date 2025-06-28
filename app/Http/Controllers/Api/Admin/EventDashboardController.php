@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\CollectorSession;
 use App\Models\Donation;
+use App\Models\DonationType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,17 @@ class EventDashboardController extends Controller
             })->count();
             $activeSessions = CollectorSession::where('event_id', $eventId)
                 ->where('status', 'active')->count();
+
+            // Zabihat count for this event
+            $zabihatTypeId = DonationType::where('name', 'Zabihat')->value('id');
+            $totalZabihat = 0;
+            if ($zabihatTypeId) {
+                $totalZabihat = Donation::whereHas('collectorSession', function($query) use ($eventId) {
+                    $query->where('event_id', $eventId);
+                })
+                ->where('donation_type_id', $zabihatTypeId)
+                ->sum('quantity');
+            }
             
             // Total collected by currency for this event
             $currencyTotals = Donation::join('collector_sessions', 'donations.collector_session_id', '=', 'collector_sessions.id')
@@ -88,6 +100,7 @@ class EventDashboardController extends Controller
                 'total_sessions' => $totalSessions,
                 'total_donations' => $totalDonations,
                 'active_sessions' => $activeSessions,
+                'total_zabihat' => (int)$totalZabihat,
                 'currency_totals' => $currencyTotals,
                 'category_breakdown' => $categoryBreakdown,
                 'collector_breakdown' => $collectorBreakdown,
