@@ -21,6 +21,11 @@ class DashboardController extends Controller
             ->orderBy('donated_at', 'desc')
             ->paginate(15);
 
+        $donations->getCollection()->transform(function($donation) {
+            $donation->donor_name = optional($donation->donor)->fullname ?? 'Not Found';
+            return $donation;
+        });
+
         return response()->json($donations);
     }
 }

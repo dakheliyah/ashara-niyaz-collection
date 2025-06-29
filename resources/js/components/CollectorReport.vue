@@ -17,6 +17,13 @@
             <input type="text" id="collector_its" v-model="filters.collectorIts" placeholder="Enter ITS ID" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
         </div>
         <div>
+            <label for="event_id" class="block text-sm font-medium text-gray-700">Event</label>
+            <select id="event_id" v-model="filters.eventId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <option value="">All Events</option>
+                <option v-for="event in events" :key="event.id" :value="event.id">{{ event.name }}</option>
+            </select>
+        </div>
+        <div>
              <button @click="applyFilters" :disabled="loading" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-blue-300">
                 {{ loading ? 'Loading...' : 'Apply Filters' }}
             </button>
@@ -42,7 +49,9 @@
             <tr>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector Name</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector ITS</th>
-              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Sessions</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session ID</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Event</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session Start</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Donations</th>
               <th v-for="currency in currencies" :key="currency" class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 {{ currency }}
@@ -51,14 +60,16 @@
           </thead>
           <tbody>
             <tr v-if="summaryReport.length === 0">
-                <td :colspan="4 + currencies.length" class="text-center py-10 text-gray-500">
+                <td :colspan="6 + currencies.length" class="text-center py-10 text-gray-500">
                     {{ loading ? 'Loading summary...' : 'No summary data available for the selected filters.' }}
                 </td>
             </tr>
-            <tr v-for="item in summaryReport" :key="item.collector_its">
+            <tr v-for="item in summaryReport" :key="item.session_id">
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.collector_name }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.collector_its }}</td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.total_sessions }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.session_id }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.event_name }} ({{ item.event_id }})</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatDate(item.session_start) }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ item.total_donations }}</td>
               <td v-for="currency in currencies" :key="currency" class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                 {{ formatAmount(item[currency] || 0) }}
@@ -84,6 +95,7 @@
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donation ID</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session ID</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Event</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donor ITS</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donor Name</th>
@@ -93,7 +105,7 @@
           </thead>
           <tbody>
             <tr v-if="detailedReport.data.length === 0">
-                <td colspan="8" class="text-center py-10 text-gray-500">
+                <td colspan="9" class="text-center py-10 text-gray-500">
                     {{ loading ? 'Loading details...' : 'No detailed donations available for the selected filters.' }}
                 </td>
             </tr>
@@ -101,6 +113,7 @@
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.id }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.collector_session.collector.fullname }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.collector_session_id }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.collector_session.event ? `${donation.collector_session.event.name} (${donation.collector_session.event.id})` : 'N/A' }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatDate(donation.donated_at) }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor_its_id }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor ? donation.donor.fullname : 'Not Found' }}</td>
@@ -132,6 +145,7 @@ export default {
   data() {
     return {
       summaryReport: [],
+      events: [],
       currencies: [],
       detailedReport: {
         data: [],
@@ -140,18 +154,29 @@ export default {
         startDate: '',
         endDate: '',
         collectorIts: '',
+        eventId: '',
       },
       loading: false,
       error: null,
     };
   },
   created() {
+    this.fetchEvents();
     this.applyFilters();
   },
   methods: {
     applyFilters() {
       this.fetchSummaryReport();
       this.fetchDetailedReport('/api/admin/reports/detailed');
+    },
+    async fetchEvents() {
+        try {
+            const response = await window.axios.get('/api/admin/events');
+            this.events = response.data;
+        } catch (error) {
+            console.error('Error fetching events:', error);
+            this.error = 'Failed to load events for filtering.';
+        }
     },
     async fetchSummaryReport() {
       this.loading = true;
@@ -161,6 +186,7 @@ export default {
             start_date: this.filters.startDate,
             end_date: this.filters.endDate,
             collector_its: this.filters.collectorIts,
+            event_id: this.filters.eventId,
         };
         const response = await window.axios.get('/api/admin/reports/summary', { params });
         this.summaryReport = response.data.summary;
@@ -186,6 +212,9 @@ export default {
         }
         if (this.filters.collectorIts) {
             urlObject.searchParams.set('collector_its', this.filters.collectorIts);
+        }
+        if (this.filters.eventId) {
+            urlObject.searchParams.set('event_id', this.filters.eventId);
         }
         const response = await window.axios.get(urlObject.pathname + urlObject.search);
         this.detailedReport = response.data;

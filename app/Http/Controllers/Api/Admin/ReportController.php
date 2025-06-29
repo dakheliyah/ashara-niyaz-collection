@@ -10,6 +10,7 @@ use App\Models\Donation;
 use App\Models\DonationType;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 use App\Models\Currency;
 
 class ReportController extends Controller
@@ -26,16 +27,24 @@ class ReportController extends Controller
 
     public function getDetailedReport(Request $request)
     {
-        $query = Donation::with(['collectorSession.collector.mumineen', 'donor', 'donationType', 'currency'])
+        $query = Donation::with(['collectorSession.collector.mumineen', 'collectorSession.event', 'donor', 'donationType', 'currency'])
             ->orderBy('donated_at', 'desc');
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('donated_at', [$request->input('start_date'), $request->input('end_date')]);
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+            $query->whereBetween('donated_at', [$startDate, $endDate]);
         }
 
         if ($request->filled('collector_its')) {
             $query->whereHas('collectorSession.collector', function ($q) use ($request) {
                 $q->where('its_id', $request->input('collector_its'));
+            });
+        }
+
+        if ($request->filled('event_id')) {
+            $query->whereHas('collectorSession', function ($q) use ($request) {
+                $q->where('event_id', $request->input('event_id'));
             });
         }
 
@@ -72,7 +81,9 @@ class ReportController extends Controller
         $query = Donation::where('donation_type_id', $zabihatType->id);
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('donated_at', [$request->input('start_date'), $request->input('end_date')]);
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+            $query->whereBetween('donated_at', [$startDate, $endDate]);
         }
 
         $totalZabihat = $query->sum('quantity');
@@ -82,11 +93,13 @@ class ReportController extends Controller
 
     private function getAggregatedSummaryData(Request $request)
     {
-        $query = CollectorSession::with(['collector.mumineen', 'donations.currency'])
+        $query = CollectorSession::with(['collector.mumineen', 'donations.currency', 'event'])
             ->withCount('donations');
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('started_at', [$request->input('start_date'), $request->input('end_date')]);
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+            $query->whereBetween('started_at', [$startDate, $endDate]);
         }
 
         if ($request->filled('collector_its')) {
@@ -95,51 +108,57 @@ class ReportController extends Controller
             });
         }
 
-        $sessions = $query->get();
+        // I am assuming collector_sessions table has an event_id column.
+        // If not, this will need to be changed to use whereHas('donations', ...)
+        if ($request->filled('event_id')) {
+            $query->where('event_id', $request->input('event_id'));
+        }
 
-        $sessionsByCollector = $sessions->groupBy('collector.its_id');
+        $sessions = $query->get();
 
         $currencyCodes = Currency::all()->pluck('code')->all();
 
-        $summary = $sessionsByCollector->map(function ($collectorSessions, $itsId) use ($currencyCodes) {
-            $firstSession = $collectorSessions->first();
-            if (!$firstSession) return null;
-
-            $collector = $firstSession->collector;
+        $summary = $sessions->map(function ($session) use ($currencyCodes) {
+            $collector = $session->collector;
 
             $reportRow = [
-                'collector_name' => $collector->mumineen->fullname ?? $collector->its_id,
+                'collector_name' => optional($collector->mumineen)->fullname ?? $collector->its_id,
                 'collector_its' => $collector->its_id,
-                'total_sessions' => $collectorSessions->count(),
-                'total_donations' => $collectorSessions->sum('donations_count'),
+                'session_id' => $session->id,
+                'session_start' => $session->started_at,
+                'total_donations' => $session->donations_count,
+                'event_id' => optional($session->event)->id,
+                'event_name' => optional($session->event)->name,
             ];
 
+            // Initialize all currency columns to 0
             foreach ($currencyCodes as $code) {
                 $reportRow[$code] = 0;
             }
 
-            foreach ($collectorSessions as $session) {
-                $donationsByCurrency = $session->donations->groupBy('currency.code');
-                foreach ($donationsByCurrency as $code => $donations) {
-                    if (isset($reportRow[$code])) {
-                        $reportRow[$code] += $donations->sum('amount');
-                    }
+            // Sum donations for this session by currency
+            $donationsByCurrency = $session->donations->groupBy('currency.code');
+            foreach ($donationsByCurrency as $code => $donations) {
+                if (in_array($code, $currencyCodes)) {
+                    $reportRow[$code] = $donations->sum('amount');
                 }
             }
 
             return $reportRow;
-        })->filter()->values();
+        })->values();
 
         return [$summary, $currencyCodes];
     }
 
     public function exportDetailedReport(Request $request)
     {
-        $query = Donation::with(['collectorSession.collector.mumineen', 'donor', 'donationType', 'currency'])
+        $query = Donation::with(['collectorSession.collector.mumineen', 'collectorSession.event', 'donor', 'donationType', 'currency'])
             ->orderBy('donated_at', 'desc');
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('donated_at', [$request->input('start_date'), $request->input('end_date')]);
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+            $query->whereBetween('donated_at', [$startDate, $endDate]);
         }
 
         if ($request->filled('collector_its')) {

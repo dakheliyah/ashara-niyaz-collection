@@ -21,8 +21,11 @@ class SummaryReportExport implements FromCollection, WithHeadings, WithMapping
         $this->headings = [
             'Collector Name',
             'Collector ITS',
-            'Total Sessions',
+            'Session ID',
+            'Session Start',
             'Total Donations',
+            'Event ID',
+            'Event Name',
         ];
         foreach ($this->currencyCodes as $code) {
             $this->headings[] = strtoupper($code);
@@ -44,12 +47,14 @@ class SummaryReportExport implements FromCollection, WithHeadings, WithMapping
         $mappedRow = [
             $row['collector_name'],
             $row['collector_its'],
-            $row['total_sessions'],
+            $row['session_id'],
+            $row['session_start'],
             $row['total_donations'],
+            $row['event_id'],
+            $row['event_name'],
         ];
 
         foreach ($this->currencyCodes as $code) {
-            // Append each currency total, defaulting to 0 if not present
             $mappedRow[] = $row[$code] ?? 0;
         }
 
