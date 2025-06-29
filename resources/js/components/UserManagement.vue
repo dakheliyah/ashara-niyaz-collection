@@ -295,7 +295,7 @@ export default {
       }
       
       try {
-        await window.axios.post(`/api/admin/users/${userId}/deactivate`);
+        await window.axios.put(`/api/admin/users/${userId}/deactivate`);
         await this.loadUsers();
         alert('User deactivated successfully');
       } catch (error) {

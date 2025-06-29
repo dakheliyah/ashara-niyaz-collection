@@ -14,8 +14,9 @@ class CurrencySeeder extends Seeder
      */
     public function run(): void
     {
-        Currency::create(['code' => 'LKR', 'symbol' => 'Rs', 'name' => 'Sri Lankan Rupee']);
-        Currency::create(['code' => 'INR', 'symbol' => '₹', 'name' => 'Indian Rupee']);
-        Currency::create(['code' => 'USD', 'symbol' => '$', 'name' => 'United States Dollar']);
+        Currency::updateOrCreate(['code' => 'LKR'], ['symbol' => 'Rs', 'name' => 'Sri Lankan Rupee']);
+        Currency::updateOrCreate(['code' => 'INR'], ['symbol' => '₹', 'name' => 'Indian Rupee']);
+        Currency::updateOrCreate(['code' => 'USD'], ['symbol' => '$', 'name' => 'United States Dollar']);
+        Currency::updateOrCreate(['code' => 'EUR'], ['symbol' => '€', 'name' => 'Euro']);
     }
 }

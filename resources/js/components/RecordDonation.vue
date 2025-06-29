@@ -166,6 +166,10 @@ export default {
             try {
                 const response = await window.axios.get('/api/currencies');
                 this.currencies = response.data;
+                const lkrCurrency = this.currencies.find(c => c.code === 'LKR');
+                if (lkrCurrency) {
+                    this.selectCurrency(lkrCurrency.id);
+                }
             } catch (error) {
                 console.error('Error fetching currencies:', error);
             }

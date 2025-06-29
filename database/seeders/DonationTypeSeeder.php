@@ -24,5 +24,10 @@ class DonationTypeSeeder extends Seeder
             ['name' => 'Zabihat'],
             ['tracks_count' => true]
         );
+
+        DonationType::updateOrCreate(
+            ['name' => 'Thaal'],
+            ['tracks_count' => false]
+        );
     }
 }

@@ -1,12 +1,12 @@
 export const donationDefaults = {
   'Niyaz e Hussain': {
     LKR: 10000,
-    INR: 5000,
-    USD: 10,
+    INR: 3000,
+    USD: 30,
   },
   'Zabihat': {
     LKR: 30000,
-    INR: 7000,
-    USD: 25,
+    INR: 9000,
+    USD: 100,
   },
 };
