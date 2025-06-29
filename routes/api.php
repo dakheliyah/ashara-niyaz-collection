@@ -80,8 +80,8 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     // Reports
     Route::get('/reports/summary', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getSummaryReport']);
     Route::get('/reports/detailed', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getDetailedReport']);
-    Route::get('/reports/summary/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportSummary']);
-    Route::get('/reports/detailed/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportDetailed']);
+    Route::get('/reports/summary/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportSummaryReport']);
+    Route::get('/reports/detailed/export', [\App\Http\Controllers\Api\Admin\ReportController::class, 'exportDetailedReport']);
     Route::get('/reports/zabihat-count', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getZabihatCount']);
     
     Route::post('/admins', [AdminController::class, 'store']);
