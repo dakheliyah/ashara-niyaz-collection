@@ -2,12 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\AuthenticatedUser;
 use App\Models\Admin;
 use App\Models\Mumineen;
-use App\Http\AuthenticatedUser;
+use App\Services\ItsTokenCipher;
 use Closure;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class ItsAuthMiddleware
@@ -19,7 +20,7 @@ class ItsAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->hasHeader('Token')) {
+        if (! $request->hasHeader('Token')) {
             return response()->json(['message' => 'Token header is required.'], 401);
         }
 
@@ -32,9 +33,9 @@ class ItsAuthMiddleware
         // The token value might be URL-encoded.
         $token = urldecode($token);
 
-        $decryptedToken = $this->decrypt($token);
+        $decryptedToken = ItsTokenCipher::decrypt($token);
 
-        if ($decryptedToken === false || $decryptedToken === null) {
+        if ($decryptedToken === null) {
             return response()->json(['message' => 'Invalid token.'], 401);
         }
 
@@ -42,7 +43,7 @@ class ItsAuthMiddleware
         $user = Admin::where('its_id', $decryptedToken)->first();
 
         // If not found in Admin, check the Mumineen table
-        if (!$user) {
+        if (! $user) {
             $user = Mumineen::where('its_id', $decryptedToken)->first();
         }
 
@@ -51,42 +52,14 @@ class ItsAuthMiddleware
 
             // Use the AuthenticatedUser class to standardize the user object
             $request->attributes->add(['admin' => new AuthenticatedUser($user)]);
+
             return $next($request);
         }
-        error_log("Token: " .  $token);
-        error_log("Decrypted Token: " .  $decryptedToken);
-        error_log("User: " .  $user);
+        error_log('Token: '.$token);
+        error_log('Decrypted Token: '.$decryptedToken);
+        error_log('User: '.$user);
+
         // If not found in either table, the token is invalid
         return response()->json(['message' => 'User not found.'], 401);
-    }
-
-    /**
-     * Decrypt data from secure storage using OpenSSL.
-     */
-    private function decrypt($encrypted)
-    {
-        if (empty($encrypted)) {
-            return null;
-        }
-        
-        $key = env('ITS_ENCRYPTION_KEY');
-        $decoded = base64_decode($encrypted);
-        
-        if ($decoded === false) {
-            return null;
-        }
-        
-        $ivLength = openssl_cipher_iv_length('AES-256-CBC');
-        
-        if (strlen($decoded) <= $ivLength) {
-            return null;
-        }
-        
-        $iv = substr($decoded, 0, $ivLength);
-        $cipherText = substr($decoded, $ivLength);
-        
-        $decrypted = openssl_decrypt($cipherText, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
-        
-        return $decrypted === false ? null : $decrypted;
     }
 }

@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->encryptCookies(except: [
+            'its_no',
+        ]);
+
         $middleware->alias([
             'its.auth' => \App\Http\Middleware\ItsAuthMiddleware::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,

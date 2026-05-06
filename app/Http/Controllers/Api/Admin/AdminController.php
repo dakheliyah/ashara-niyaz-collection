@@ -5,9 +5,8 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Role;
+use App\Services\ItsTokenCipher;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
@@ -67,20 +66,9 @@ class AdminController extends Controller
     public function encryptItsId(Request $request)
     {
         $request->validate(['its_id' => 'required|digits:8']);
-        $encryptedId = $this->encrypt($request->its_id);
-        return response()->json(['encrypted_its_id' => $encryptedId]);
-    }
 
-    private function encrypt($value)
-    {
-        $key = env('ITS_ENCRYPTION_KEY');
-        if (empty($key)) {
-            throw new \Exception('ITS_ENCRYPTION_KEY is not set in the .env file.');
-        }
-
-        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-CBC'));
-        $encrypted = openssl_encrypt($value, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
-
-        return base64_encode($iv . $encrypted);
+        return response()->json([
+            'encrypted_its_id' => ItsTokenCipher::encrypt($request->its_id),
+        ]);
     }
 }

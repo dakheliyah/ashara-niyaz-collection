@@ -55,8 +55,13 @@ export default {
     logout() {
       // Clear the cookie by setting its expiry to a past date
       document.cookie = "its_no=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      // Redirect to the external login page
-      window.location.href = 'https://colombo-relay.asharamubaraka.net/';
+      const relayUrl = import.meta.env.VITE_AUTH_RELAY_URL;
+      if (typeof relayUrl === 'string' && relayUrl.length > 0) {
+        window.location.href = relayUrl;
+      } else {
+        console.warn('VITE_AUTH_RELAY_URL is not set; staying on this origin after logout.');
+        window.location.href = '/';
+      }
     },
 
     async fetchUserInfo() {

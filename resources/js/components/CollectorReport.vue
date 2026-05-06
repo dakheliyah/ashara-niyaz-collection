@@ -101,11 +101,12 @@
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donor Name</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reconciliation</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="detailedReport.data.length === 0">
-                <td colspan="9" class="text-center py-10 text-gray-500">
+                <td colspan="10" class="text-center py-10 text-gray-500">
                     {{ loading ? 'Loading details...' : 'No detailed donations available for the selected filters.' }}
                 </td>
             </tr>
@@ -119,6 +120,19 @@
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donor ? donation.donor.fullname : 'Not Found' }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donation_type.name }}</td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatAmount(donation.amount) }} {{ donation.currency.code }}</td>
+              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                <div class="flex flex-col">
+                    <span :class="reconciliationStatusClass(donation.reconciliation_status)" class="px-2 py-1 text-xs font-semibold leading-tight rounded-full">
+                        {{ donation.reconciliation_status || 'Unreconciled' }}
+                    </span>
+                    <span class="text-xs text-gray-600 mt-1">
+                        {{ formatAmount(donation.reconciled_amount || 0) }} / {{ formatAmount(donation.amount) }}
+                    </span>
+                    <button v-if="donation.reconciliation_status !== 'fully_reconciled'" @click="openReconciliationModal(donation)" class="mt-2 text-xs bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-1 px-2 rounded">
+                        Reconcile
+                    </button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -135,6 +149,36 @@
         </div>
       </div>
     </div>
+
+    <!-- Reconciliation Modal -->
+    <div v-if="showReconciliationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+      <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Reconcile Donation #{{ currentDonation.id }}</h3>
+          <div class="mt-2 px-7 py-3">
+            <p class="text-sm text-gray-500 mb-2">
+                Total Amount: {{ formatAmount(currentDonation.amount) }} {{ currentDonation.currency.code }}
+            </p>
+            <p class="text-sm text-gray-500 mb-4">
+                Remaining: {{ formatAmount(currentDonation.amount - (currentDonation.reconciled_amount || 0)) }} {{ currentDonation.currency.code }}
+            </p>
+            <input type="number" v-model.number="reconciliationAmount" placeholder="Enter amount to reconcile" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            <div v-if="reconciliationError" class="mt-2 text-sm text-red-600">
+              {{ reconciliationError }}
+            </div>
+          </div>
+          <div class="items-center px-4 py-3">
+            <button @click="submitReconciliation" class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
+              Submit Reconciliation
+            </button>
+            <button @click="closeReconciliationModal" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -158,6 +202,10 @@ export default {
       },
       loading: false,
       error: null,
+      showReconciliationModal: false,
+      currentDonation: null,
+      reconciliationAmount: null,
+      reconciliationError: null,
     };
   },
   created() {
@@ -273,6 +321,54 @@ export default {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
+    },
+    openReconciliationModal(donation) {
+      this.currentDonation = donation;
+      this.reconciliationAmount = null;
+      this.reconciliationError = null;
+      this.showReconciliationModal = true;
+    },
+    closeReconciliationModal() {
+      this.showReconciliationModal = false;
+      this.currentDonation = null;
+    },
+    async submitReconciliation() {
+      if (!this.reconciliationAmount || this.reconciliationAmount <= 0) {
+        this.reconciliationError = 'Please enter a valid amount.';
+        return;
+      }
+
+      this.reconciliationError = null;
+      try {
+        const response = await window.axios.put(`/api/admin/donations/${this.currentDonation.id}/reconcile`, {
+          reconciled_amount: this.reconciliationAmount,
+        });
+
+        // Update the donation in the local detailedReport data
+        const index = this.detailedReport.data.findIndex(d => d.id === this.currentDonation.id);
+        if (index !== -1) {
+          this.detailedReport.data.splice(index, 1, response.data);
+        }
+
+        this.closeReconciliationModal();
+      } catch (error) {
+        if (error.response && error.response.data && error.response.data.reconciled_amount) {
+          this.reconciliationError = error.response.data.reconciled_amount[0];
+        } else {
+          this.reconciliationError = 'An unexpected error occurred.';
+        }
+        console.error('Error submitting reconciliation:', error);
+      }
+    },
+    reconciliationStatusClass(status) {
+        switch (status) {
+            case 'fully_reconciled':
+                return 'bg-green-200 text-green-800';
+            case 'partially_reconciled':
+                return 'bg-yellow-200 text-yellow-800';
+            default:
+                return 'bg-red-200 text-red-800';
+        }
     }
   },
 };
