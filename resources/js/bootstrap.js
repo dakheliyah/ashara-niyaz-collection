@@ -4,6 +4,29 @@ window.axios = axios;
 // Configure axios headers
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+let isRedirectingToAuth = false;
+
+function redirectToAuthRelay() {
+    if (isRedirectingToAuth) {
+        return;
+    }
+
+    const relayUrl = import.meta.env.VITE_AUTH_RELAY_URL;
+    if (typeof relayUrl !== 'string' || relayUrl.trim().length === 0) {
+        console.warn('VITE_AUTH_RELAY_URL is not configured; cannot redirect for token retrieval.');
+        return;
+    }
+
+    try {
+        const destination = new URL(relayUrl);
+        destination.searchParams.set('return_to', window.location.href);
+        isRedirectingToAuth = true;
+        window.location.replace(destination.toString());
+    } catch (e) {
+        console.error('Invalid VITE_AUTH_RELAY_URL; cannot redirect for token retrieval.', e);
+    }
+}
+
 // Function to get cookie value by name
 function getCookie(name) {
     console.log('🍪 getCookie() called for:', name);
@@ -171,6 +194,11 @@ window.axios.interceptors.response.use(
             console.error('🔑 Expected Token Format: Base64 encoded string');
             console.error('💡 Suggestion: Check if token needs URL encoding/decoding');
             console.error('=== END AUTH ERROR ===\n');
+        }
+
+        const errorMessage = String(error.response?.data?.message || '').toLowerCase();
+        if (error.response?.status === 401 && errorMessage.includes('token header is required')) {
+            redirectToAuthRelay();
         }
         
         console.error('⏰ Error Time:', new Date().toISOString());
