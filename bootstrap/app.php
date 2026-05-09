@@ -14,6 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->encryptCookies(except: [
             'its_no',
+            'user',
+            'profile',
+            'its_user_data',
+            'its_name',
+            'its_gender',
+            'its_age',
+            'its_city',
+            'its_jamiat',
         ]);
 
         $middleware->alias([
