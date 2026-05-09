@@ -8,18 +8,6 @@
 export default {
   name: 'AuthCallback',
   mounted() {
-    const onlgnToken = this.$route.query.onlgn_token;
-    if (onlgnToken) {
-      const params = new URLSearchParams();
-      params.set('onlgn_token', Array.isArray(onlgnToken) ? onlgnToken[0] : onlgnToken);
-      const returnPath = this.$route.query.return_path;
-      if (returnPath) {
-        params.set('return_path', Array.isArray(returnPath) ? returnPath[0] : returnPath);
-      }
-      window.location.replace('/auth/onlgn-handoff?' + params.toString());
-      return;
-    }
-
     const token = this.$route.query.its_no;
 
     if (token) {

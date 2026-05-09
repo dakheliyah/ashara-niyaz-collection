@@ -196,7 +196,14 @@ window.axios.interceptors.response.use(
         }
 
         const errorMessage = String(error.response?.data?.message || '').toLowerCase();
-        if (error.response?.status === 401 && errorMessage.includes('token header is required')) {
+        const shouldRedirectToAuth =
+            error.response?.status === 401 && (
+                errorMessage.includes('token header is required') ||
+                errorMessage.includes('user not found') ||
+                errorMessage.includes('invalid token')
+            );
+
+        if (shouldRedirectToAuth) {
             redirectToAuthRelay();
         }
         
