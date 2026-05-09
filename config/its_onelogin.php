@@ -28,4 +28,17 @@ return [
 
     'encryption_key' => env('ITS_ENCRYPTION_KEY'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication debug logging
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, ItsAuthMiddleware writes structured logs explaining
+    | which credential source was used (Token header, user cookie, etc.)
+    | and why requests fail with 401.
+    |
+    */
+
+    'auth_debug' => env('ITS_AUTH_DEBUG', false),
+
 ];

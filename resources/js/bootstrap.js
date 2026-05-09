@@ -6,10 +6,31 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 let isRedirectingToAuth = false;
 
+function logAuthState(context) {
+    const relayUrl = import.meta.env.VITE_AUTH_RELAY_URL;
+    const cookieString = document.cookie || '';
+    const cookieNames = cookieString
+        .split(';')
+        .map((part) => part.trim().split('=')[0])
+        .filter(Boolean);
+
+    console.log('[Auth Debug]', context, {
+        host: window.location.host,
+        path: window.location.pathname + window.location.search,
+        relayUrl,
+        cookiesAvailable: cookieNames,
+        hasItsNo: cookieNames.includes('its_no'),
+        hasUser: cookieNames.includes('user'),
+        hasItsUserData: cookieNames.includes('its_user_data'),
+    });
+}
+
 function redirectToAuthRelay() {
     if (isRedirectingToAuth) {
         return;
     }
+
+    logAuthState('redirectToAuthRelay:start');
 
     const relayUrl = import.meta.env.VITE_AUTH_RELAY_URL;
     if (typeof relayUrl !== 'string' || relayUrl.trim().length === 0) {
@@ -19,6 +40,7 @@ function redirectToAuthRelay() {
 
     try {
         const destination = new URL(relayUrl);
+        console.log('[Auth Debug] redirect destination', destination.toString());
         isRedirectingToAuth = true;
         window.location.replace(destination.toString());
     } catch (e) {
@@ -123,6 +145,8 @@ export async function initializeAuth() {
 // Add request interceptor to log outgoing requests
 window.axios.interceptors.request.use(
     function (config) {
+        logAuthState('axios:request');
+
         // Read the token from the cookie before every request
         const token = getCookie('its_no');
         
@@ -204,6 +228,7 @@ window.axios.interceptors.response.use(
             );
 
         if (shouldRedirectToAuth) {
+            logAuthState('axios:401_redirect');
             redirectToAuthRelay();
         }
         

@@ -9,6 +9,7 @@ use App\Services\ItsTokenCipher;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class ItsAuthMiddleware
@@ -20,9 +21,33 @@ class ItsAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $itsId = $this->resolveItsId($request);
+        $resolvedBy = 'none';
+        $itsId = $this->resolveItsId($request, $resolvedBy);
         if ($itsId === null) {
+            if ((bool) config('its_onelogin.auth_debug', false)) {
+                Log::warning('ITS auth failed: no valid credential found', [
+                    'host' => $request->getHost(),
+                    'path' => $request->path(),
+                    'resolved_by' => $resolvedBy,
+                    'token_header_present' => $request->header('Token') !== null,
+                    'token_header_length' => strlen((string) $request->header('Token', '')),
+                    'cookies_present' => [
+                        'user' => $request->cookie('user') !== null,
+                        'its_no' => $request->cookie('its_no') !== null,
+                        'its_user_data' => $request->cookie('its_user_data') !== null,
+                    ],
+                ]);
+            }
             return response()->json(['message' => 'Token header is required.'], 401);
+        }
+
+        if ((bool) config('its_onelogin.auth_debug', false)) {
+            Log::info('ITS auth credential resolved', [
+                'host' => $request->getHost(),
+                'path' => $request->path(),
+                'resolved_by' => $resolvedBy,
+                'its_id_tail' => substr($itsId, -4),
+            ]);
         }
 
         // Find the user in the Admin table first
@@ -51,13 +76,14 @@ class ItsAuthMiddleware
         return response()->json(['message' => 'User not found.'], 401);
     }
 
-    private function resolveItsId(Request $request): ?string
+    private function resolveItsId(Request $request, ?string &$resolvedBy = null): ?string
     {
         // 1) Existing app contract: encrypted Token header
         $tokenHeader = $request->header('Token');
         if (is_string($tokenHeader) && $tokenHeader !== '') {
             $decryptedHeader = ItsTokenCipher::decrypt(urldecode($tokenHeader));
             if ($this->isValidItsId($decryptedHeader)) {
+                $resolvedBy = 'token_header';
                 return $decryptedHeader;
             }
         }
@@ -65,6 +91,7 @@ class ItsAuthMiddleware
         // 2) WordPress OneLogin cross-subdomain cookie: plain 8-digit user id
         $userCookie = $request->cookie('user');
         if ($this->isValidItsId($userCookie)) {
+            $resolvedBy = 'user_cookie';
             return $userCookie;
         }
 
@@ -73,6 +100,7 @@ class ItsAuthMiddleware
         if (is_string($itsNoCookie) && $itsNoCookie !== '') {
             $decryptedCookie = ItsTokenCipher::decrypt(urldecode($itsNoCookie));
             if ($this->isValidItsId($decryptedCookie)) {
+                $resolvedBy = 'its_no_cookie';
                 return $decryptedCookie;
             }
         }
@@ -83,10 +111,12 @@ class ItsAuthMiddleware
             $decoded = json_decode(urldecode($itsUserData), true);
             $itsNo = is_array($decoded) ? ($decoded['its_no'] ?? null) : null;
             if ($this->isValidItsId($itsNo)) {
+                $resolvedBy = 'its_user_data_cookie';
                 return $itsNo;
             }
         }
 
+        $resolvedBy = 'none';
         return null;
     }
 
