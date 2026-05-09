@@ -19,7 +19,6 @@ function redirectToAuthRelay() {
 
     try {
         const destination = new URL(relayUrl);
-        destination.searchParams.set('return_to', window.location.href);
         isRedirectingToAuth = true;
         window.location.replace(destination.toString());
     } catch (e) {
