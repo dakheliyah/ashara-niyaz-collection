@@ -98,13 +98,28 @@
             </div>
           </div>
         </div>
+
+        <div v-if="currencySummary.length > 0" class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">Currency Summary (Current Page)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div
+              v-for="summary in currencySummary"
+              :key="summary.code"
+              class="bg-white border border-gray-200 rounded-md p-3"
+            >
+              <p class="text-sm text-gray-600">{{ summary.code }}</p>
+              <p class="text-base font-bold text-gray-900">{{ formatAmount(summary.total) }}</p>
+              <p class="text-xs text-gray-500">{{ summary.count }} donations</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { saveAs } from 'file-saver';
 import RecordDonation from './RecordDonation.vue';
 
@@ -181,6 +196,25 @@ const handleDonationRecorded = (donation) => {
 
   fetchDonations(1); // Refresh with authoritative data
 };
+
+const currencySummary = computed(() => {
+  const totals = {};
+  const donationList = donations.value?.data || [];
+
+  donationList.forEach((donation) => {
+    const code = donation?.currency?.code || 'N/A';
+    const amount = Number(donation?.amount || 0);
+
+    if (!totals[code]) {
+      totals[code] = { code, total: 0, count: 0 };
+    }
+
+    totals[code].total += Number.isFinite(amount) ? amount : 0;
+    totals[code].count += 1;
+  });
+
+  return Object.values(totals).sort((a, b) => a.code.localeCompare(b.code));
+});
 
 const exportDonations = async () => {
   try {

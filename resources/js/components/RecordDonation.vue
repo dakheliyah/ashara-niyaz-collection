@@ -187,7 +187,7 @@ export default {
         async fetchCurrencies() {
             try {
                 const response = await window.axios.get('/api/currencies');
-                this.currencies = response.data;
+                this.currencies = (response.data || []).filter(currency => currency?.is_active !== false);
                 const lkrCurrency = this.currencies.find(c => c.code === 'LKR');
                 if (lkrCurrency) {
                     this.selectCurrency(lkrCurrency.id);
