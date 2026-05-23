@@ -174,18 +174,20 @@
             <span class="currency-option-symbol">{{ currency.symbol }}</span>
             <span class="currency-option-code">{{ currency.code }}</span>
             <span class="currency-option-name">{{ currency.name }}</span>
-            <span class="currency-status-badge" :class="isCurrencyActive(currency) ? 'active' : 'inactive'">
-              {{ isCurrencyActive(currency) ? 'Active' : 'Inactive' }}
-            </span>
-            <button
-              type="button"
-              class="btn btn-sm"
-              :class="isCurrencyActive(currency) ? 'btn-warning' : 'btn-success'"
-              :disabled="currencyActionLoadingId === currency.id"
-              @click="toggleCurrencyStatus(currency)"
-            >
-              {{ currencyActionLoadingId === currency.id ? 'Saving...' : (isCurrencyActive(currency) ? 'Deactivate' : 'Activate') }}
-            </button>
+            <div class="currency-option-actions">
+              <span class="currency-status-badge" :class="isCurrencyActive(currency) ? 'active' : 'inactive'">
+                {{ isCurrencyActive(currency) ? 'Active' : 'Inactive' }}
+              </span>
+              <button
+                type="button"
+                class="btn btn-sm"
+                :class="isCurrencyActive(currency) ? 'btn-warning' : 'btn-success'"
+                :disabled="currencyActionLoadingId === currency.id"
+                @click="toggleCurrencyStatus(currency)"
+              >
+                {{ currencyActionLoadingId === currency.id ? 'Saving...' : (isCurrencyActive(currency) ? 'Deactivate' : 'Activate') }}
+              </button>
+            </div>
           </div>
         </div>
         <div v-else class="no-data">No currencies configured yet.</div>
@@ -836,6 +838,7 @@ export default {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
+  min-width: 0;
 }
 
 .currency-option-symbol {
@@ -856,6 +859,17 @@ export default {
   color: #7f8c8d;
   font-size: 0.9rem;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.currency-option-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
 }
 
 .currency-status-badge {
@@ -952,6 +966,21 @@ export default {
   
   .currency-grid {
     grid-template-columns: 1fr;
+  }
+
+  .currency-option-item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .currency-option-name {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .currency-option-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
   
   .event-details {
