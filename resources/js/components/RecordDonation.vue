@@ -23,6 +23,20 @@
                 <div v-if="loadingDonor" class="loading-text">
                     Loading donor information...
                 </div>
+                <div v-if="showPhoneInput" class="form-group mt-3">
+                    <label for="donor_phone">Donor Phone Number:</label>
+                    <input
+                        type="tel"
+                        id="donor_phone"
+                        v-model="form.donor_phone"
+                        placeholder="Enter donor phone number"
+                        required
+                        class="form-control"
+                    />
+                    <div class="loading-text">
+                        Donor not found in Mumineen. This phone number will be saved to create a donor record.
+                    </div>
+                </div>
             </div>
 
 
@@ -101,10 +115,12 @@ import { donationDefaults } from '../config.js';
 
 export default {
     name: 'RecordDonation',
+    emits: ['donation-recorded'],
     data() {
         return {
             form: {
                 donor_its_id: '',
+                donor_phone: '',
                 donation_type_id: null,
                 currency_id: null,
                 amount: '',
@@ -113,6 +129,7 @@ export default {
             donationTypes: [],
             currencies: [],
             donorInfo: {
+                found: null,
                 fullname: null,
                 email: null
             },
@@ -120,7 +137,8 @@ export default {
             loadingDonor: false,
             message: '',
             messageClass: '',
-            donorLookupTimeout: null
+            donorLookupTimeout: null,
+            hasLookedUpDonor: false
         };
     },
     computed: {
@@ -132,7 +150,11 @@ export default {
             return this.donationTypes.find(type => type.id === this.form.donation_type_id);
         },
         isFormValid() {
-            return this.form.donor_its_id && this.form.donation_type_id && this.form.currency_id && this.form.amount;
+            const donorPhoneValid = !this.showPhoneInput || !!this.form.donor_phone;
+            return this.form.donor_its_id && this.form.donation_type_id && this.form.currency_id && this.form.amount && donorPhoneValid;
+        },
+        showPhoneInput() {
+            return this.hasLookedUpDonor && this.donorInfo?.found === false;
         },
         displayAmount: {
             get() {
@@ -184,7 +206,9 @@ export default {
             
             // Only reset donor info if the ITS ID is completely different or not 8 digits
             if (currentItsId.length < 8) {
-                this.donorInfo = { fullname: null, email: null };
+                this.donorInfo = { found: null, fullname: null, email: null };
+                this.form.donor_phone = '';
+                this.hasLookedUpDonor = false;
             }
             
             // Only lookup if we have exactly 8 digits
@@ -205,9 +229,14 @@ export default {
             try {
                 const response = await window.axios.get(`/api/donors/${currentItsId}`);
                 this.donorInfo = response.data;
+                this.hasLookedUpDonor = true;
+                if (response.data?.found) {
+                    this.form.donor_phone = '';
+                }
             } catch (error) {
                 console.error('Error looking up donor:', error);
-                this.donorInfo = { fullname: null, email: null };
+                this.donorInfo = { found: null, fullname: null, email: null };
+                this.hasLookedUpDonor = false;
             } finally {
                 this.loadingDonor = false;
             }
@@ -248,18 +277,21 @@ export default {
             this.message = ''; // Clear previous messages
             
             try {
-                await window.axios.post('/api/donations', this.form);
+                const response = await window.axios.post('/api/donations', this.form);
+                this.$emit('donation-recorded', response.data);
                 
                 this.message = 'Donation recorded successfully!';
                 this.messageClass = 'success';
 
                 // Reset the entire form for the next donation
                 this.form.donor_its_id = '';
+                this.form.donor_phone = '';
                 this.form.donation_type_id = null;
                 this.form.currency_id = null;
                 this.form.amount = '';
                 this.form.quantity = 1; // Reset quantity
-                this.donorInfo = { fullname: null, email: null };
+                this.donorInfo = { found: null, fullname: null, email: null };
+                this.hasLookedUpDonor = false;
 
                 // Clear the success message after 3 seconds
                 setTimeout(() => {

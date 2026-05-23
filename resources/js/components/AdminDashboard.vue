@@ -160,6 +160,74 @@
         <p>Choose an event from the dropdown above to view its dashboard and collection breakdown.</p>
       </div>
     </div>
+
+    <!-- Currency Management Section -->
+    <div class="section-container currency-management-section">
+      <h4>Currency Options</h4>
+      <p class="section-description">Add currencies available when recording donations. Update default amounts in <code>resources/js/config.js</code> after adding a new currency.</p>
+
+      <div v-if="loadingCurrencies" class="loading">Loading currencies...</div>
+      <div v-else-if="currenciesError" class="error-message">{{ currenciesError }}</div>
+      <template v-else>
+        <div v-if="currencies.length > 0" class="currency-options-list">
+          <div v-for="currency in currencies" :key="currency.id" class="currency-option-item">
+            <span class="currency-option-symbol">{{ currency.symbol }}</span>
+            <span class="currency-option-code">{{ currency.code }}</span>
+            <span class="currency-option-name">{{ currency.name }}</span>
+          </div>
+        </div>
+        <div v-else class="no-data">No currencies configured yet.</div>
+
+        <form @submit.prevent="addCurrency" class="add-currency-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="currency_code">Code</label>
+              <input
+                id="currency_code"
+                v-model="newCurrency.code"
+                type="text"
+                maxlength="3"
+                placeholder="e.g. GBP"
+                class="form-control"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="currency_symbol">Symbol</label>
+              <input
+                id="currency_symbol"
+                v-model="newCurrency.symbol"
+                type="text"
+                maxlength="10"
+                placeholder="e.g. £"
+                class="form-control"
+                required
+              />
+            </div>
+            <div class="form-group form-group-grow">
+              <label for="currency_name">Name</label>
+              <input
+                id="currency_name"
+                v-model="newCurrency.name"
+                type="text"
+                placeholder="e.g. British Pound"
+                class="form-control"
+                required
+              />
+            </div>
+            <div class="form-group form-group-action">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-primary" :disabled="addingCurrency || !canAddCurrency">
+                {{ addingCurrency ? 'Adding...' : 'Add Currency' }}
+              </button>
+            </div>
+          </div>
+          <div v-if="currencyMessage" :class="['currency-message', currencyMessageClass]">
+            {{ currencyMessage }}
+          </div>
+        </form>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -179,15 +247,34 @@ export default {
       loading: false,
       error: null,
       dashboardData: null,
+
+      // Currency management
+      currencies: [],
+      loadingCurrencies: true,
+      currenciesError: null,
+      addingCurrency: false,
+      currencyMessage: '',
+      currencyMessageClass: '',
+      newCurrency: {
+        code: '',
+        symbol: '',
+        name: '',
+      },
     };
   },
   computed: {
     activeSessions() {
       return this.dashboardData?.collector_sessions?.filter(session => !session.ended_at).length || 0;
-    }
+    },
+    canAddCurrency() {
+      return this.newCurrency.code.trim().length === 3
+        && this.newCurrency.symbol.trim()
+        && this.newCurrency.name.trim();
+    },
   },
   mounted() {
     this.fetchEvents();
+    this.fetchCurrencies();
   },
   methods: {
     async fetchEvents() {
@@ -254,7 +341,53 @@ export default {
         month: 'short',
         day: 'numeric'
       });
-    }
+    },
+
+    async fetchCurrencies() {
+      this.loadingCurrencies = true;
+      this.currenciesError = null;
+      try {
+        const response = await window.axios.get('/api/currencies');
+        this.currencies = response.data;
+      } catch (error) {
+        console.error('Error fetching currencies:', error);
+        this.currenciesError = 'Failed to load currencies.';
+      } finally {
+        this.loadingCurrencies = false;
+      }
+    },
+
+    async addCurrency() {
+      if (!this.canAddCurrency) return;
+
+      this.addingCurrency = true;
+      this.currencyMessage = '';
+      try {
+        const response = await window.axios.post('/api/admin/currencies', {
+          code: this.newCurrency.code.trim().toUpperCase(),
+          symbol: this.newCurrency.symbol.trim(),
+          name: this.newCurrency.name.trim(),
+        });
+
+        this.currencies = [...this.currencies, response.data].sort((a, b) =>
+          a.code.localeCompare(b.code)
+        );
+        this.newCurrency = { code: '', symbol: '', name: '' };
+        this.currencyMessage = `${response.data.code} added successfully.`;
+        this.currencyMessageClass = 'success';
+      } catch (error) {
+        const validationErrors = error.response?.data?.errors;
+        this.currencyMessage = validationErrors
+          ? Object.values(validationErrors).flat().join(' ')
+          : (error.response?.data?.message || 'Failed to add currency.');
+        this.currencyMessageClass = 'error';
+      } finally {
+        this.addingCurrency = false;
+        setTimeout(() => {
+          this.currencyMessage = '';
+        }, 5000);
+      }
+    },
   },
 };
 </script>
@@ -608,6 +741,125 @@ export default {
   font-style: italic;
 }
 
+/* Currency Management */
+.currency-management-section {
+  margin-top: 2rem;
+}
+
+.section-description {
+  color: #7f8c8d;
+  margin: -0.5rem 0 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.section-description code {
+  background: #f1f3f5;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.currency-options-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.currency-option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.currency-option-symbol {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #27ae60;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.currency-option-code {
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 2.5rem;
+}
+
+.currency-option-name {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.add-currency-form {
+  border-top: 1px solid #e1e8ed;
+  padding-top: 1.5rem;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 100px;
+}
+
+.form-group-grow {
+  flex: 1;
+  min-width: 180px;
+}
+
+.form-group-action {
+  min-width: 130px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.form-control {
+  padding: 0.65rem 0.75rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.currency-message {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.currency-message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.currency-message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .dashboard-container {
@@ -634,6 +886,17 @@ export default {
   .breakdown-table th,
   .breakdown-table td {
     padding: 0.5rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-group,
+  .form-group-grow,
+  .form-group-action {
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

@@ -59,22 +59,32 @@
                 <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Donor</th>
                 <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
                 <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="donations.data.length === 0">
-                <td colspan="6" class="text-center py-10 text-gray-500">No donations recorded yet.</td>
+                <td colspan="7" class="text-center py-10 text-gray-500">No donations recorded yet.</td>
               </tr>
               <tr v-for="donation in donations.data" :key="donation.id">
                 <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.id }}</td>
                 <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.collector_session_id }}</td>
-                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatDateTime(donation.date) }}</td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatDateTime(getDonationDateTime(donation)) }}</td>
                 <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                   <p class="text-gray-900 whitespace-no-wrap">{{ donation.donor ? donation.donor.fullname : 'Not Found' }}</p>
                   <p class="text-gray-600 whitespace-no-wrap">{{ donation.donor_its_id }}</p>
                 </td>
-                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donation_type.name }}</td>
-                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatAmount(donation.amount) }} {{ donation.currency.code }}</td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ donation.donation_type?.name || 'N/A' }}</td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ formatAmount(donation.amount) }} {{ donation.currency?.code || '' }}</td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <button
+                    @click="shareReceiptViaWhatsApp(donation)"
+                    :disabled="!canShareReceipt(donation)"
+                    class="bg-green-500 hover:bg-green-700 text-white text-xs font-bold py-1 px-3 rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Share via WhatsApp
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -159,8 +169,17 @@ const endSession = async () => {
   }
 };
 
-const handleDonationRecorded = () => {
-  fetchDonations(); // Refresh donations list
+const handleDonationRecorded = (donation) => {
+  // Optimistically show the new donation immediately, then sync with server.
+  if (donation) {
+    const existingDonations = donations.value?.data || [];
+    donations.value = {
+      ...donations.value,
+      data: [donation, ...existingDonations.filter(item => item.id !== donation.id)],
+    };
+  }
+
+  fetchDonations(1); // Refresh with authoritative data
 };
 
 const exportDonations = async () => {
@@ -187,6 +206,52 @@ const formatAmount = (amount) => {
 const formatDateTime = (dateTimeString) => {
   if (!dateTimeString) return 'N/A';
   return new Date(dateTimeString).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+};
+
+const getDonationDateTime = (donation) => {
+  return donation?.donated_at || donation?.date || donation?.created_at || null;
+};
+
+const getDonationPhone = (donation) => {
+  return donation?.whatsapp_number || donation?.donor?.mobile || null;
+};
+
+const normalizeWhatsappPhone = (phone) => {
+  if (!phone) return null;
+  let normalized = String(phone).replace(/\D/g, '');
+  if (normalized.startsWith('00')) {
+    normalized = normalized.slice(2);
+  } else if (normalized.startsWith('0')) {
+    normalized = `94${normalized.slice(1)}`;
+  }
+  return normalized || null;
+};
+
+const getReceiptUrl = (donation) => {
+  if (donation?.receipt_url) {
+    return donation.receipt_url;
+  }
+  if (donation?.uuid) {
+    return `${window.location.origin}/receipts/${donation.uuid}`;
+  }
+  return null;
+};
+
+const canShareReceipt = (donation) => {
+  return !!(normalizeWhatsappPhone(getDonationPhone(donation)) && getReceiptUrl(donation));
+};
+
+const shareReceiptViaWhatsApp = (donation) => {
+  const phone = normalizeWhatsappPhone(getDonationPhone(donation));
+  const receiptUrl = getReceiptUrl(donation);
+
+  if (!phone || !receiptUrl) {
+    error.value = 'Cannot share receipt: missing donor phone or receipt link.';
+    return;
+  }
+
+  const message = encodeURIComponent(`Donation receipt: ${receiptUrl}`);
+  window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
 };
 </script>
 

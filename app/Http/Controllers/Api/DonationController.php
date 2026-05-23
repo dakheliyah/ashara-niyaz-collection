@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\CollectorSession;
 use App\Models\Donation;
+use App\Models\Mumineen;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -33,21 +34,44 @@ class DonationController extends Controller
 
         // Validate the request data
         $validator = Validator::make($request->all(), [
-            'donor_its_id' => 'required|string|max:8',
+            'donor_its_id' => ['required', 'string', 'size:8', 'regex:/^\d{8}$/'],
             'donation_type_id' => 'required|exists:donation_types,id',
             'currency_id' => 'required|exists:currencies,id',
             'amount' => 'required|numeric|min:0',
             'quantity' => 'nullable|integer|min:1',
+            'donor_phone' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $donorItsId = $request->input('donor_its_id');
+        $donorPhone = $request->input('donor_phone');
+        $donor = Mumineen::where('its_id', $donorItsId)->first();
+
+        if (!$donor) {
+            if (empty($donorPhone)) {
+                return response()->json([
+                    'message' => 'Phone number is required when donor record is not found.',
+                    'errors' => [
+                        'donor_phone' => ['Phone number is required when donor record is not found.'],
+                    ],
+                ], 422);
+            }
+
+            $donor = Mumineen::create([
+                'its_id' => $donorItsId,
+                'fullname' => 'Unknown Donor',
+                'mobile' => $donorPhone,
+            ]);
+        }
+
         // Create the donation
         $donation = new Donation();
         $donation->collector_session_id = $session->id;
-        $donation->donor_its_id = $request->input('donor_its_id');
+        $donation->donor_its_id = $donor->its_id;
+        $donation->whatsapp_number = $donorPhone ?: $donor->mobile;
         $donation->donation_type_id = $request->input('donation_type_id');
         $donation->currency_id = $request->input('currency_id');
         $donation->amount = $request->input('amount');
@@ -55,6 +79,15 @@ class DonationController extends Controller
         $donation->donated_at = now(); // Corrected column name
         // The 'collected_by' info is correctly stored in the collector_sessions table.
         $donation->save(); // This will trigger the 'creating' event and generate the UUID
+
+        $donation->refresh();
+
+        if ($donation->uuid && empty($donation->receipt_url)) {
+            $donation->receipt_url = route('receipt.public', ['uuid' => $donation->uuid]);
+            $donation->save();
+        }
+
+        $donation->load(['donationType:id,name', 'currency:id,name,code', 'donor']);
 
         return response()->json($donation, 201);
     }

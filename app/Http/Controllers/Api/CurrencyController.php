@@ -21,7 +21,19 @@ class CurrencyController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'code' => 'required|string|size:3|alpha|unique:currencies,code',
+            'name' => 'required|string|max:255',
+            'symbol' => 'required|string|max:10',
+        ]);
+
+        $currency = Currency::create([
+            'code' => strtoupper($validated['code']),
+            'name' => $validated['name'],
+            'symbol' => $validated['symbol'],
+        ]);
+
+        return response()->json($currency, 201);
     }
 
     /**

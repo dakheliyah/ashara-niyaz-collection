@@ -50,18 +50,21 @@ class DetailedReportExport implements FromCollection, WithHeadings, WithMapping
      */
     public function map($donation): array
     {
+        $donorIts = $donation->donor_its_id ?? 'N/A';
+        $donorName = optional($donation->donor)->fullname ?? 'N/A';
+
         return [
             $donation->id,
-            $donation->collectorSession->collector->fullname ?? 'N/A',
-            $donation->collectorSession->id,
+            optional(optional($donation->collectorSession)->collector)->fullname ?? 'N/A',
+            optional($donation->collectorSession)->id,
             optional($donation->collectorSession->event)->id,
             optional($donation->collectorSession->event)->name,
             $donation->donated_at,
-            $donation->donor_its,
-            $donation->donor->name ?? 'N/A',
-            $donation->donationType->name,
+            $donorIts,
+            $donorName,
+            optional($donation->donationType)->name,
             $donation->amount,
-            $donation->currency->code,
+            optional($donation->currency)->code,
         ];
     }
 }

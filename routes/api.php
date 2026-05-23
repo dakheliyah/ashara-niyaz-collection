@@ -104,6 +104,9 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     // Collector Report Routes
     Route::get('/reports/collector/detailed', [AdminCollectorReportController::class, 'getDetailedReport']);
     Route::get('/reports/collector/summary', [AdminCollectorReportController::class, 'getSummaryReport']);
+
+    // Currency management
+    Route::post('/currencies', [CurrencyController::class, 'store']);
 });
 
 // Donor Dashboard Routes

@@ -25,6 +25,7 @@ class DonorController extends Controller
 
             if ($mumin) {
                 return response()->json([
+                    'found' => true,
                     'its_id' => $mumin->its_id,
                     'fullname' => $mumin->fullname,
                     'mobile' => $mumin->mobile,
@@ -37,6 +38,7 @@ class DonorController extends Controller
 
             // If donor not found, return basic structure with ITS ID
             return response()->json([
+                'found' => false,
                 'its_id' => $itsId,
                 'fullname' => null,
                 'mobile' => null,
