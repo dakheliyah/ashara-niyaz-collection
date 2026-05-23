@@ -77,6 +77,7 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
     Route::put('/users/{id}/deactivate', [UserManagementController::class, 'deactivate']);
     Route::delete('/users/{id}', [UserManagementController::class, 'archive']);
     Route::get('/mumineen/{itsId}', [UserManagementController::class, 'getMumineenByItsId']);
+    Route::get('/collectors/{itsId}/sessions', [UserManagementController::class, 'getCollectorSessions']);
 
     // Reports
     Route::get('/reports/summary', [\App\Http\Controllers\Api\Admin\ReportController::class, 'getSummaryReport']);
@@ -107,6 +108,8 @@ Route::middleware(['its.auth', 'role:admin'])->prefix('admin')->group(function (
 
     // Currency management
     Route::post('/currencies', [CurrencyController::class, 'store']);
+    Route::put('/currencies/{currency}/activate', [CurrencyController::class, 'activate']);
+    Route::put('/currencies/{currency}/deactivate', [CurrencyController::class, 'deactivate']);
 });
 
 // Donor Dashboard Routes

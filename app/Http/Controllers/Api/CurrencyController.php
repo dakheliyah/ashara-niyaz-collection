@@ -13,7 +13,13 @@ class CurrencyController extends Controller
      */
     public function index()
     {
-        return Currency::all();
+        $query = Currency::query();
+
+        if (!request()->boolean('include_inactive')) {
+            $query->where('is_active', true);
+        }
+
+        return $query->orderBy('code')->get();
     }
 
     /**
@@ -31,9 +37,24 @@ class CurrencyController extends Controller
             'code' => strtoupper($validated['code']),
             'name' => $validated['name'],
             'symbol' => $validated['symbol'],
+            'is_active' => true,
         ]);
 
         return response()->json($currency, 201);
+    }
+
+    public function activate(Currency $currency)
+    {
+        $currency->update(['is_active' => true]);
+
+        return response()->json($currency->fresh());
+    }
+
+    public function deactivate(Currency $currency)
+    {
+        $currency->update(['is_active' => false]);
+
+        return response()->json($currency->fresh());
     }
 
     /**

@@ -174,6 +174,18 @@
             <span class="currency-option-symbol">{{ currency.symbol }}</span>
             <span class="currency-option-code">{{ currency.code }}</span>
             <span class="currency-option-name">{{ currency.name }}</span>
+            <span class="currency-status-badge" :class="isCurrencyActive(currency) ? 'active' : 'inactive'">
+              {{ isCurrencyActive(currency) ? 'Active' : 'Inactive' }}
+            </span>
+            <button
+              type="button"
+              class="btn btn-sm"
+              :class="isCurrencyActive(currency) ? 'btn-warning' : 'btn-success'"
+              :disabled="currencyActionLoadingId === currency.id"
+              @click="toggleCurrencyStatus(currency)"
+            >
+              {{ currencyActionLoadingId === currency.id ? 'Saving...' : (isCurrencyActive(currency) ? 'Deactivate' : 'Activate') }}
+            </button>
           </div>
         </div>
         <div v-else class="no-data">No currencies configured yet.</div>
@@ -253,6 +265,7 @@ export default {
       loadingCurrencies: true,
       currenciesError: null,
       addingCurrency: false,
+      currencyActionLoadingId: null,
       currencyMessage: '',
       currencyMessageClass: '',
       newCurrency: {
@@ -347,7 +360,9 @@ export default {
       this.loadingCurrencies = true;
       this.currenciesError = null;
       try {
-        const response = await window.axios.get('/api/currencies');
+        const response = await window.axios.get('/api/currencies', {
+          params: { include_inactive: 1 },
+        });
         this.currencies = response.data;
       } catch (error) {
         console.error('Error fetching currencies:', error);
@@ -383,6 +398,36 @@ export default {
         this.currencyMessageClass = 'error';
       } finally {
         this.addingCurrency = false;
+        setTimeout(() => {
+          this.currencyMessage = '';
+        }, 5000);
+      }
+    },
+
+    isCurrencyActive(currency) {
+      return currency?.is_active !== false;
+    },
+
+    async toggleCurrencyStatus(currency) {
+      this.currencyActionLoadingId = currency.id;
+      this.currencyMessage = '';
+
+      try {
+        const action = this.isCurrencyActive(currency) ? 'deactivate' : 'activate';
+        const response = await window.axios.put(`/api/admin/currencies/${currency.id}/${action}`);
+        const updated = response.data;
+
+        this.currencies = this.currencies.map(item => (
+          item.id === currency.id ? updated : item
+        ));
+
+        this.currencyMessage = `${updated.code} ${this.isCurrencyActive(updated) ? 'activated' : 'deactivated'} successfully.`;
+        this.currencyMessageClass = 'success';
+      } catch (error) {
+        this.currencyMessage = error.response?.data?.message || 'Failed to update currency status.';
+        this.currencyMessageClass = 'error';
+      } finally {
+        this.currencyActionLoadingId = null;
         setTimeout(() => {
           this.currencyMessage = '';
         }, 5000);
@@ -458,6 +503,23 @@ export default {
 
 .btn-primary:hover {
   background: #2980b9;
+}
+
+.btn-sm {
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.btn-warning {
+  background: #f39c12;
+  color: white;
+  border: none;
+}
+
+.btn-success {
+  background: #27ae60;
+  color: white;
+  border: none;
 }
 
 /* Event Info Header */
@@ -793,6 +855,24 @@ export default {
 .currency-option-name {
   color: #7f8c8d;
   font-size: 0.9rem;
+  flex: 1;
+}
+
+.currency-status-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.currency-status-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.currency-status-badge.inactive {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .add-currency-form {

@@ -151,6 +151,39 @@ class UserManagementController extends Controller
     }
 
     /**
+     * Get collector sessions by ITS ID
+     */
+    public function getCollectorSessions($itsId)
+    {
+        try {
+            $collector = Admin::with('role')->where('its_id', $itsId)->first();
+
+            if (!$collector || optional($collector->role)->name !== 'collector') {
+                return response()->json([
+                    'error' => 'Collector not found'
+                ], 404);
+            }
+
+            $sessions = CollectorSession::with('event')
+                ->where('its_id', $itsId)
+                ->orderByDesc('started_at')
+                ->get();
+
+            return response()->json([
+                'collector' => [
+                    'its_id' => $collector->its_id,
+                ],
+                'sessions' => $sessions,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to load collector sessions',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Check if a collector can be activated (for when they come back)
      */
     public function checkCollectorStatus($itsId)

@@ -15,6 +15,11 @@ class Currency extends Model
         'code',
         'name',
         'symbol',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     /**

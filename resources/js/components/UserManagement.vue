@@ -332,13 +332,20 @@ export default {
     
     async viewCollectorSessions(itsId) {
       try {
-        const user = this.users.find(u => u.its_id === itsId);
+        const user = this.users.find(u => String(u.its_id) === String(itsId));
         if (!user) return;
 
         this.selectedCollectorName = user.fullname || user.its_id;
         
         const response = await window.axios.get(`/api/admin/collectors/${itsId}/sessions`);
-        this.collectorSessions = response.data.sessions;
+        const responseData = response.data || {};
+        const sessions = Array.isArray(responseData.sessions)
+          ? responseData.sessions
+          : Array.isArray(responseData.data)
+            ? responseData.data
+            : [];
+
+        this.collectorSessions = sessions;
         this.showSessionsModal = true;
       } catch (error) {
         console.error('Error loading collector sessions:', error);
